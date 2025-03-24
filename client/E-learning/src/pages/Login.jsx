@@ -21,6 +21,7 @@ const Login = () => {
     loginUser,
     { data: loginData, error: loginError, isLoading: loginisLoading, isSuccess: loginSuccess },
   ] = useLoginUserMutation();
+  const navigate= useNavigate();
 
   const changeInputHandler = (e, type) => {
     const { name, value } = e.target;
@@ -46,6 +47,8 @@ const Login = () => {
     }
     if (loginSuccess && loginData) {
       toast.success(loginData.message || "Login Successful");
+      navigate("/");
+
     }
     if (loginError) {
       toast.error(loginError.data?.message || "Login failed");
