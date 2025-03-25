@@ -8,6 +8,8 @@ import {
   DropdownMenuTrigger,
   DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
+import { Link, useNavigate } from "react-router-dom";
+
 
 import { Menu, School } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -26,7 +28,7 @@ import { Separator } from "@radix-ui/react-dropdown-menu";
 
 
 const Navbar = () => {
-  const user = false;
+  const user = true;
 
   return (
     <div className="h-16 dark:bg-[#0A0A0A] bg-white border-b dark:border-b-gray-800 border-b-gray-200 top-0 left-0 right-0 duration-300 z-10">
@@ -56,9 +58,9 @@ const Navbar = () => {
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
-                  <DropdownMenuItem>My learning</DropdownMenuItem>
-                  <DropdownMenuItem>Edit Profile</DropdownMenuItem>
-                  <DropdownMenuItem onClick={logoutHandler}>
+                  <DropdownMenuItem><Link to="my-learning">My learning</Link></DropdownMenuItem>
+                  <DropdownMenuItem><Link to="profile">Edit Profile</Link></DropdownMenuItem>
+                  <DropdownMenuItem >
                     Log out
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
