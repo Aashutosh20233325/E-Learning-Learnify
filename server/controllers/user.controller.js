@@ -68,7 +68,22 @@ export const login = async(req,res)=>{
             generateToken(res,user,`Welcome back ${user.name}`);
 
 
+            if(user.photoUrl){
+                const publicId = user.photoUrl.split("/").pop().split(".")[0]; // extract public id
+                deleteMediaFromCloudinary(publicId);
+            }
 
+            const cloudResponse = await uploadMedia(profilePhoto.path);
+            const photoUrl = cloudResponse.secure_url;
+    
+            const updatedData = {name, photoUrl};
+            const updatedUser = await User.findByIdAndUpdate(userId, updatedData, {new:true}).select("-password");
+
+            return res.status(200).json({
+                success:true,
+                user:updatedUser,
+                message:"Profile updated successfully."
+            })
         }
     catch(error){
         console.log(error);
