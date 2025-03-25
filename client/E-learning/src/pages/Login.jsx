@@ -79,7 +79,7 @@ const Login = () => {
                   value={signupInput.name}
                   onChange={(e) => changeInputHandler(e, "signup")}
                   placeholder="Eg. Sneha"
-                  required
+                  required="true"
                 />
               </div>
               <div className="space-y-1">
@@ -90,7 +90,7 @@ const Login = () => {
                   value={signupInput.email}
                   placeholder="Eg. sneha@gmail.com"
                   onChange={(e) => changeInputHandler(e, "signup")}
-                  required
+                  required="true"
                 />
               </div>
               <div className="space-y-1">
@@ -101,7 +101,7 @@ const Login = () => {
                   value={signupInput.password}
                   placeholder="Eg. xyz"
                   onChange={(e) => changeInputHandler(e, "signup")}
-                  required
+                  required="true"
                 />
               </div>
             </CardContent>
@@ -135,7 +135,7 @@ const Login = () => {
                   value={loginInput.email}
                   placeholder="Eg. sneha@gmail.com"
                   onChange={(e) => changeInputHandler(e, "login")}
-                  required
+                  required="true"
                 />
               </div>
               <div className="space-y-1">
@@ -146,7 +146,7 @@ const Login = () => {
                   value={loginInput.password}
                   placeholder="Eg. xyz"
                   onChange={(e) => changeInputHandler(e, "login")}
-                  required
+                 required="true"
                 />
               </div>
             </CardContent>
