@@ -1,12 +1,12 @@
-import './App.css'
+import "./App.css";
 import MainLayout from "./layout/MainLayout";
-
 
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
 
-import HeroSection from './pages/student/HeroSection.jsx';
+import HeroSection from "./pages/student/HeroSection.jsx";
 
 import Login from "./pages/Login.jsx";
+import Courses from "./pages/student/Courses";
 const appRouter = createBrowserRouter([
   {
     path: "/",
@@ -14,30 +14,28 @@ const appRouter = createBrowserRouter([
     children: [
       {
         path: "/",
-        element:(
+        element: (
           <>
             <HeroSection />
+            <Courses />
             {/*Course*/}
           </>
-),
-},
-{
-  path:"login",
-  element:<Login/>
-}
-
+        ),
+      },
+      {
+        path: "login",
+        element: <Login />,
+      },
     ],
   },
 ]);
 
 function App() {
-
   return (
     <main>
-     <RouterProvider router={appRouter}></RouterProvider>
-
+      <RouterProvider router={appRouter}></RouterProvider>
     </main>
-  )
+  );
 }
 
-export default App
+export default App;
