@@ -23,6 +23,7 @@ export const authApi = createApi({
                 method: "POST",
                 body: inputData,
             }),
+            
             async onQueryStarted(_, { queryFulfilled, dispatch }) {
                 try {
                     const result = await queryFulfilled;
@@ -30,10 +31,16 @@ export const authApi = createApi({
                 } catch (error) {
                     console.error("Login Error:", error);
                 }
-            },
+            }
         }),
-    }),
+        loadUser:builder.query({
+            query:()=>({
+                url:"profile",
+                method:"GET"
+            })
+        })
+    })
 });
 
-export const { useRegisterUserMutation, useLoginUserMutation } = authApi;
+export const { useRegisterUserMutation, useLoginUserMutation ,useLoadUserQuery} = authApi;
 export default authApi;

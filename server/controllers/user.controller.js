@@ -76,8 +76,69 @@ export const login = async(req,res)=>{
             success:false,
             message:"Failed to register"
         })
+    }   
+}
+ export const logout=async(req,res)=>{
+    try{
+        return res.status(200).cookie("token","",{maxAge:0}).json({
+            message:"Logged out successfully",
+            success:true
+        })
+
+    } catch(error){
+        console.log(error);
+        return res.status(500).json({
+            success:false,
+            message:"Failed to logout"
+        })
+
+    }
+ }
+ export const getUserProfile=async(req,res)=>{
+    try{
+      const userId=req.id;
+      const user=await User.findById(userId).select("-password");
+      if(!user){
+        return res.status(404).json({
+            message:"Profile not found",
+            success:false
+        })
+      }
+
+      return res.status(200).json({
+           success:true,
+           user
+      })
+        
+    }
+    catch(error){
+        console.log(error);
+        return res.status(500).json({
+            success:false,
+            message:"Failed to logout"
+        })
+
     }
 
+    }
+    export const updateProfile=async(req,res)=>{
+        try{
+            const userId=req.id;
+            const {name}=req.body;
+            const profilePhoto=req.file;
 
-    
-}
+            const user=await User.findById(userId);
+            if(!user){
+                return res.status(404).json({
+                    message:"User not found",
+                    success:false
+                })
+            }
+            const updatedData={name,photoUrl}
+
+        }
+        catch(error){
+            console.log(error)
+        }
+    }
+ 
