@@ -4,6 +4,7 @@ import MainLayout from "./layout/MainLayout";
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
 
 import HeroSection from "./pages/student/HeroSection.jsx";
+import AddCourse from "./pages/admin/course/AddCourse";
 
 import Login from "./pages/Login.jsx";
 import Courses from "./pages/student/Courses";
@@ -49,9 +50,15 @@ const appRouter = createBrowserRouter([
             element: <Dashboard />
           },
           {
-            path: "courses",
+            path: "course",
             element: <CourseTable />
-          }
+          },
+         {
+          path: "course/create",
+          element: <AddCourse/>
+
+         }
+    
         ]
       }
     ],
