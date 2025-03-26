@@ -19,7 +19,7 @@ app.use(cors({
     credentials:true
 }));
 app.use("/api/v1/user",userRoute);
-appl.use("/api/v1/course",courseRoute);
+app.use("/api/v1/course",courseRoute);
 
 app.get("/home",(_,res)=>{
      res.status(200).json({
