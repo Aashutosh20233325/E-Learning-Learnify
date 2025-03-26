@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,11 +25,26 @@ import {
   SheetTrigger,
 } from "./ui/sheet";
 import { Separator } from "@radix-ui/react-dropdown-menu";
-
+import { useLogoutUserMutation } from "@/features/api/authApi";
+import { useSelector } from "react-redux";
+import { toast } from "sonner";
 
 const Navbar = () => {
-  const user = true;
+  const { user } = useSelector((store) => store.auth);
+  
+  const [logoutUser , {data , isSuccess}] = useLogoutUserMutation();
+  const navigate = useNavigate();
+  const logoutHandler = async() =>{
+    await logoutUser();
+  };
+  useEffect( ()=>{
 
+    if(isSuccess){
+      toast.success(data.message || "User Logged Out");
+      navigate("/login");
+    }
+  }
+    ,[isSuccess])
   return (
     <div className="h-16 dark:bg-[#0A0A0A] bg-white border-b dark:border-b-gray-800 border-b-gray-200 top-0 left-0 right-0 duration-300 z-10">
       {/* Desktop */}
@@ -60,7 +75,7 @@ const Navbar = () => {
                 <DropdownMenuGroup>
                   <DropdownMenuItem><Link to="my-learning">My learning</Link></DropdownMenuItem>
                   <DropdownMenuItem><Link to="profile">Edit Profile</Link></DropdownMenuItem>
-                  <DropdownMenuItem >
+                  <DropdownMenuItem onClick = {logoutHandler}>
                     Log out
                   </DropdownMenuItem>
                 </DropdownMenuGroup>

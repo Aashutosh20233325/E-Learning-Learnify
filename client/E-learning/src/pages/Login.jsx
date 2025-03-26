@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useRegisterUserMutation, useLoginUserMutation } from "@/features/api/authApi";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 const Login = () => {
   const [signupInput, setSignupInput] = useState({ name: "", email: "", password: "" });
@@ -43,7 +44,7 @@ const Login = () => {
       toast.success(registerData.message || "SignUp Successful");
     }
     if (registerError) {
-      toast.error(registerError.data?.message || "SignUp failed");
+      toast.error(registerError?.data?.message || "SignUp failed");
     }
     if (loginSuccess && loginData) {
       toast.success(loginData.message || "Login Successful");
@@ -51,13 +52,13 @@ const Login = () => {
 
     }
     if (loginError) {
-      toast.error(loginError.data?.message || "Login failed");
+      toast.error(loginError.data.message || "Login failed");
     }
   }, [registerSuccess, loginSuccess, registerError, loginError, registerData, loginData]);
 
   return (
     <div className="flex items-center w-full justify-center">
-      <Tabs defaultValue="signup" className="w-[400px]">
+      <Tabs defaultValue="login" className="w-[400px]">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="signup">Signup</TabsTrigger>
           <TabsTrigger value="login">Login</TabsTrigger>
