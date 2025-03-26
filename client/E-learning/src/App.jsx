@@ -30,14 +30,29 @@ const appRouter = createBrowserRouter([
         element: <Login />,
       },
       {
-        path:"my-learning",
-        element:<MyLearning/>
+        path: "my-learning",
+        element: <MyLearning />
       },
       {
-        path:"profile",
-        element:<Profile/>
+        path: "profile",
+        element: <Profile />
       },
+      {
+        path: "admin",
+        element: <Sidebar />,
+        children: [
+          {
+            path: "dashboard",
+            element: <Dashboard />
+          },
+          {
+            path: "course",
+            element: <CourseTable />
+          }
+        ]
+      }
     ],
+
   },
 ]);
 

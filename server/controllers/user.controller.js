@@ -63,7 +63,7 @@ export const login = async(req,res)=>{
                 });
 
             }
-            generateToken(res,user,`Welcome back ${user.name}`);
+            generateToken(res,user,Welcome back ${user.name});
 
 
             if(user.photoUrl){
@@ -174,5 +174,3 @@ export const login = async(req,res)=>{
             })
         }
     }
-    
- 

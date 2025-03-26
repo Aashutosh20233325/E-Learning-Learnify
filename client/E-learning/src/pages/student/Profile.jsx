@@ -8,8 +8,19 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import React, { useEffect, useState } from "react";
+import {
+  useLoadUserQuery,
+  useUpdateUserMutation,
+} from "@/features/api/authApi";
 import {
   useLoadUserQuery,
   useUpdateUserMutation,
@@ -17,6 +28,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import Course from "./Course";
 import { toast } from "sonner";
 import Course from "./Course";
 
