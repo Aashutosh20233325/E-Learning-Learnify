@@ -5,6 +5,7 @@ import userRoute from "./routes/user.route.js";
 dotenv.config();
 import  cookieParser from "cookie-parser";
 import cors from "cors";
+import courseRoute from "./routes/course.route.js"
 
 //call database connnection here
 connectDB();
@@ -18,6 +19,7 @@ app.use(cors({
     credentials:true
 }));
 app.use("/api/v1/user",userRoute);
+appl.use("/api/v1/course",courseRoute);
 
 app.get("/home",(_,res)=>{
      res.status(200).json({
