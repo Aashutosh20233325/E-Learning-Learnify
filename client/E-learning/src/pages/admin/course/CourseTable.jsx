@@ -11,12 +11,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useNavigate } from 'react-router-dom';
+import { Edit } from "lucide-react";
+import { useGetCreatorCourseQuery } from '@/features/api/courseApi';
+import { Badge } from "@/components/ui/badge";
 
 const CourseTable = () => {
+   const {data,isLoading}=useGetCreatorCourseQuery();
   const navigate=useNavigate();
+  if(isLoading) return <h1>Loading...</h1>
   return (
     <div>
-      <Button>Create a new Course</Button>
+ <Button onClick={() => navigate(`create`)}>Create a new course</Button>
       <Table>
         <TableCaption>A list of your recent courses.</TableCaption>
         <TableHeader>
@@ -27,18 +32,18 @@ const CourseTable = () => {
             <TableHead className="text-right">Action</TableHead>
           </TableRow>
         </TableHeader>
-        {/* <TableBody>
+        <TableBody>
           {data.courses.map((course) => (
             <TableRow key={course._id}>
               <TableCell className="font-medium">{course?.coursePrice || "NA"}</TableCell>
               <TableCell> <Badge>{course.isPublished ? "Published" : "Draft"}</Badge> </TableCell>
               <TableCell>{course.courseTitle}</TableCell>
               <TableCell className="text-right">
-                <Button size='sm' variant='ghost' onClick={() => navigate(`${course._id}`)}><Edit /></Button>
+                <Button size='sm' variant='ghost'><Edit></Edit></Button>
               </TableCell>
             </TableRow>
           ))}
-        </TableBody> */}
+        </TableBody>
       </Table>
 
 
