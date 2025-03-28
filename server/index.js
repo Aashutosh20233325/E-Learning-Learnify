@@ -6,6 +6,7 @@ dotenv.config();
 import  cookieParser from "cookie-parser";
 import cors from "cors";
 import courseRoute from "./routes/course.route.js"
+import mediaRoute from "./routes/media.route.js"
 
 //call database connnection here
 connectDB();
@@ -20,7 +21,7 @@ app.use(cors({
 }));
 app.use("/api/v1/user",userRoute);
 app.use("/api/v1/course",courseRoute);
-
+app.use("/api/v1/media",mediaRoute);
 app.get("/home",(_,res)=>{
      res.status(200).json({
         success:true,
