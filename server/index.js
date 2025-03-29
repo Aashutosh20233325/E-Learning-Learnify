@@ -7,7 +7,7 @@ import  cookieParser from "cookie-parser";
 import cors from "cors";
 import courseRoute from "./routes/course.route.js"
 import mediaRoute from "./routes/media.route.js"
-
+import purchaseRoute from "./routes/purchaseCourse.Route.js"
 //call database connnection here
 connectDB();
 const app = express();
@@ -22,6 +22,7 @@ app.use(cors({
 app.use("/api/v1/user",userRoute);
 app.use("/api/v1/course",courseRoute);
 app.use("/api/v1/media",mediaRoute);
+app.use("/api/v1/purchase",purchaseRoute);
 app.get("/home",(_,res)=>{
      res.status(200).json({
         success:true,

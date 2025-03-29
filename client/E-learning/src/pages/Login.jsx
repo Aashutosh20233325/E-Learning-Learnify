@@ -75,7 +75,7 @@ const Login = () => {
       navigate("/");
     }
     if (loginError) {
-      toast.error(loginError.data.message || "Login failed");
+      toast.error(loginError?.data?.message || "Login failed");
     }
   }, [
     registerisLoading,
