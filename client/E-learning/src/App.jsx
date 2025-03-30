@@ -17,6 +17,7 @@ import CourseTable from "./pages/admin/course/CourseTable";
 import EditCourse from "./pages/admin/course/EditCourse";
 import CreateLecture from "./pages/admin/lecture/CreateLecture";
 import EditLecture from "./pages/admin/lecture/EditLecture";
+import SearchPage from "./pages/student/searchPage";
 const appRouter = createBrowserRouter([
   {
     path: "/",
@@ -43,6 +44,10 @@ const appRouter = createBrowserRouter([
       {
         path: "profile",
         element: <Profile />
+      },
+      {
+        path:"course/search",
+        element:<SearchPage/>
       },
       {
         path: "admin",
