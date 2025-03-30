@@ -55,6 +55,19 @@ const appRouter = createBrowserRouter([
         element: <CourseProgress/>
       },
       {
+        path:"course/search",
+        element:<SearchPage/>
+
+      },
+      {
+        path: "course-detail/:courseId",
+        element: <CourseDetail/>
+      },
+      {
+        path: "course-progress/:courseId",
+        element: <CourseProgress/>
+      },
+      {
         path: "admin",
         element: <Sidebar />,
         children: [
