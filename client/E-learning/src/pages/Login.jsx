@@ -8,6 +8,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -15,11 +23,21 @@ import {
   useRegisterUserMutation,
   useLoginUserMutation,
 } from "@/features/api/authApi";
+import {
+  useRegisterUserMutation,
+  useLoginUserMutation,
+} from "@/features/api/authApi";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 const Login = () => {
+  const [signupInput, setSignupInput] = useState({
+    name: "",
+    email: "",
+    password: "",
+  });
   const [signupInput, setSignupInput] = useState({
     name: "",
     email: "",
@@ -29,6 +47,12 @@ const Login = () => {
 
   const [
     registerUser,
+    {
+      data: registerData,
+      error: registerError,
+      isLoading: registerisLoading,
+      isSuccess: registerSuccess,
+    },
     {
       data: registerData,
       error: registerError,
@@ -45,7 +69,14 @@ const Login = () => {
       isLoading: loginisLoading,
       isSuccess: loginSuccess,
     },
+    {
+      data: loginData,
+      error: loginError,
+      isLoading: loginisLoading,
+      isSuccess: loginSuccess,
+    },
   ] = useLoginUserMutation();
+  const navigate = useNavigate();
   const navigate = useNavigate();
 
   const changeInputHandler = (e, type) => {
@@ -69,6 +100,7 @@ const Login = () => {
     }
     if (registerError) {
       toast.error(registerError.data.message || "SignUp failed");
+      toast.error(registerError.data.message || "SignUp failed");
     }
     if (loginSuccess && loginData) {
       toast.success(loginData.message || "Login Successful");
@@ -85,9 +117,18 @@ const Login = () => {
     registerData,
     loginData,
   ]);
+  }, [
+    registerisLoading,
+    loginisLoading,
+    registerError,
+    loginError,
+    registerData,
+    loginData,
+  ]);
 
   return (
     <div className="flex items-center w-full justify-center">
+      <Tabs defaultValue="login" className="w-[400px]">
       <Tabs defaultValue="login" className="w-[400px]">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="signup">Signup</TabsTrigger>
@@ -99,6 +140,9 @@ const Login = () => {
           <Card>
             <CardHeader>
               <CardTitle>Signup</CardTitle>
+              <CardDescription>
+                Create a new account and click signup when you're done.
+              </CardDescription>
               <CardDescription>
                 Create a new account and click signup when you're done.
               </CardDescription>
@@ -143,8 +187,14 @@ const Login = () => {
                 disabled={registerisLoading}
                 onClick={() => handleRegistration("signup")}
               >
+              <Button
+                disabled={registerisLoading}
+                onClick={() => handleRegistration("signup")}
+              >
                 {registerisLoading ? (
                   <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Please
+                    Wait
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Please
                     Wait
                   </>
@@ -184,6 +234,7 @@ const Login = () => {
                   placeholder="Eg. xyz"
                   onChange={(e) => changeInputHandler(e, "login")}
                   required="true"
+                  required="true"
                 />
               </div>
             </CardContent>
@@ -192,8 +243,14 @@ const Login = () => {
                 disabled={loginisLoading}
                 onClick={() => handleRegistration("login")}
               >
+              <Button
+                disabled={loginisLoading}
+                onClick={() => handleRegistration("login")}
+              >
                 {loginisLoading ? (
                   <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Please
+                    Wait
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Please
                     Wait
                   </>

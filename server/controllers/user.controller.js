@@ -2,6 +2,7 @@ import { User } from "../models/user.model.js";
 import bcrypt from 'bcryptjs'; 
 import {generateToken}  from "../utils/generateToken.js";
 import { deleteMediaFromCloudinary, uploadMedia } from "../utils/cloudinary.js";
+
 export const register = async (req,res) => {
     try{
         const{name,email,password}=req.body;
@@ -95,10 +96,18 @@ export const login = async(req,res)=>{
     const userId=req.id;
     const user = await User.findById(userId).select("-password").populate("enrolledCourses");
     if(!user){
+    const userId=req.id;
+    const user = await User.findById(userId).select("-password").populate("enrolledCourses");
+    if(!user){
         return res.status(404).json({
             message:"Profile not found",
             success:false
         })
+    }
+    return res.status(200).json({
+        success:true,
+        user
+    })
     }
     return res.status(200).json({
         success:true,
@@ -121,11 +130,14 @@ export const login = async(req,res)=>{
             const profilePhoto = req.file;
     
             const user = await User.findById(userId);
+
+
             if(!user){
                 return res.status(404).json({
                     message:"User not found",
                     success:false
                 }) 
+                
             }
             // extract public id of the old image from the url is it exists;
             if(user.photoUrl){

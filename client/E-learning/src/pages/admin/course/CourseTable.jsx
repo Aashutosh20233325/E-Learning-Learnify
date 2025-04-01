@@ -19,7 +19,9 @@ const CourseTable = () => {
    const {data,isLoading}=useGetCreatorCourseQuery();
   const navigate=useNavigate();
   if(isLoading) return <h1>Loading...</h1>
+
   if (!data || !data.courses) return <h1>No courses found</h1>; 
+
   return (
     <div>
  <Button onClick={() => navigate(`create`)}>Create a new course</Button>
