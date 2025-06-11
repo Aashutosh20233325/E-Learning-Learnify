@@ -12,6 +12,23 @@ export const register = async (req,res) => {
                 message:"All fields are required."
             })
         }
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid email format.",
+            });
+        }
+        console.log("email",email);
+        if (password.length < 8) {
+            return res.status(400).json({
+                success: false,
+                message: "Password must be at least 8 characters long.",
+            });
+        }
+        //display it using toast
         const user=await User.findOne({email});
         if(user){
             return res.status(400).json({

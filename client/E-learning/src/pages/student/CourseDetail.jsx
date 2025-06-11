@@ -16,16 +16,27 @@ import ReactPlayer from "react-player";
 import { useNavigate, useParams } from "react-router-dom";
 
 const CourseDetail = () => {
-   const params = useParams();
-   const courseId = params.courseId;
+  const params = useParams();
+  const courseId = params.courseId;
   const navigate = useNavigate();
-  const { data, isLoading, isError } =
-    useGetCourseDetailWithStatusQuery(courseId);
+  console.log("Course ID:", courseId);
+  const { data, isLoading, isError, error } = useGetCourseDetailWithStatusQuery(courseId);
+
+  
+
+  if (error?.status === 401) {
+    return (<div className="min-h-[50vh] flex items-center justify-center text-red-600 text-xl font-semibold">
+    Login to view course details
+  </div>);
+  }
 
   if (isLoading) return <h1>Loading...</h1>;
-  if (isError) return <h>Failed to load course details</h>;
+  if (isError  || !data) return <h1>Failed to load course details</h1>;
 
    const { course, purchased } = data;
+   console.log(data);
+
+    console.log(course);
    console.log(purchased);
 
    const handleContinueCourse = () => {
@@ -65,17 +76,24 @@ const CourseDetail = () => {
           <Card>
             <CardHeader>
               <CardTitle>Course Content</CardTitle>
-              <CardDescription>4 lectures</CardDescription>
+              <CardDescription>{`${course.lectures.length} lectures`}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               {course.lectures.map((lecture, idx) => (
                 <div key={idx} className="flex items-center gap-3 text-sm">
                   <span>
-                    {true ? <PlayCircle size={14} /> : <Lock size={14} />}
+                    {lecture.isPreviewFree || purchased ? (
+                      <PlayCircle size={14} className="text-green-600" />
+                    ) : (
+                      <Lock size={14} className="text-gray-400" />
+                    )}
                   </span>
-                  <p>{lecture.lectureTitle}</p>
+                  <p className={lecture.isPreviewFree || purchased ? "" : "text-gray-400 italic"}>
+                    {lecture.lectureTitle}
+                  </p>
                 </div>
               ))}
+
             </CardContent>
           </Card>
         </div>
@@ -88,8 +106,6 @@ const CourseDetail = () => {
                   height={"100%"}
                   url={course.lectures[0].videoUrl}
                   controls={true}
-                  
-
                 />
                 {console.log("Video URL:", course.lectures?.[0]?.videoUrl)}
               </div>

@@ -13,10 +13,13 @@ const Dashboard = () => {
   //
   const {purchasedCourse} = data || [];
 
-  const courseData = purchasedCourse.map((course)=> ({
-    name:course.courseId.courseTitle,
-    price:course.courseId.coursePrice
-  }))
+  const courseData = purchasedCourse
+  .filter(course => course.courseId) // skip null/undefined courseId
+  .map(course => ({
+    name: course.courseId.courseTitle,
+    price: course.courseId.coursePrice
+  }));
+
 
   const totalRevenue = purchasedCourse.reduce((acc,element) => acc+(element.amount || 0), 0);
 

@@ -30,7 +30,7 @@ const SearchPage = () => {
       <div className="my-6">
         <h1 className="font-bold text-xl md:text-2xl">result for "{query}"</h1>
         <p>
-          Showing results for{""}
+          Showing results for{" "}
           <span className="text-blue-800 font-bold italic">{query}</span>
         </p>
       </div>

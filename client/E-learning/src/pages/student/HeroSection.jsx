@@ -28,7 +28,7 @@ const navigate = useNavigate();
           <Input
             type="text"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {console.log(e.target.value);setSearchQuery(e.target.value)}}
             placeholder="Search Courses"
             className="flex-grow border-none focus-visible:ring-0 px-6 py-3 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
           />
