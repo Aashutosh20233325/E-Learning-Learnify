@@ -28,7 +28,7 @@ import { toast } from "sonner";
 import { useSelector } from "react-redux";
 
 const Navbar = () => {
-  const { user } = useSelector((store) => store.auth);
+  const { user,isAuthenticated } = useSelector((store) => store.auth);
   const [logoutUser, { data, isSuccess }] = useLogoutUserMutation();
   const navigate = useNavigate();
   const logoutHandler = async () => {
@@ -56,7 +56,7 @@ const Navbar = () => {
         </div>
         {/* User icons and dark mode icon  */}
         <div className="flex items-center gap-8">
-          {user ? (
+          {isAuthenticated ? (
              <DropdownMenu>
              <DropdownMenuTrigger asChild>
              <button>

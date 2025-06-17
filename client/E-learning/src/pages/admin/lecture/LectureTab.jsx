@@ -11,10 +11,11 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import { useEditLectureMutation, useGetLectureByIdQuery, useRemoveLectureMutation } from "@/features/api/courseApi";
+import { useGetQuizByLectureQuery } from '@/features/api/quizApi'; // NEW: Import quiz API hook
 import axios from "axios";
 import { Loader2 } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom"; // NEW: Import Link for navigation
 import { toast } from "sonner";
 
 const MEDIA_API = "http://localhost:8080/api/v1/media";
@@ -31,6 +32,16 @@ const LectureTab = () => {
 
   const {data:lectureData} = useGetLectureByIdQuery(lectureId);
   const lecture = lectureData?.lecture;
+
+  // NEW: Fetch quiz data for this lecture
+  const {
+    data: quizData,
+    isLoading: quizIsLoading,
+    isError: quizIsError,
+    error: quizError,
+  } = useGetQuizByLectureQuery(lectureId);
+
+  const quiz = quizData?.quiz; // Extract the quiz object if it exists
 
   useEffect(()=>{
     if(lecture){
@@ -105,7 +116,13 @@ const LectureTab = () => {
       toast.success(removeData.message);
     }
   },[removeSuccess])
-   
+    
+  // NEW: Handle error for quiz loading
+  useEffect(() => {
+    if (quizIsError) {
+      toast.error(quizError.data?.message || "Failed to load quiz details.");
+    }
+  }, [quizIsError, quizError]);
 
   return (
     <Card>
@@ -172,6 +189,35 @@ const LectureTab = () => {
               }
             
           </Button>
+        </div>
+
+        {/* NEW: Quiz Management Section for Admin/Instructor */}
+        <div className="mt-8 border-t pt-6">
+            <h3 className="text-lg font-semibold mb-4">Quiz Management</h3>
+            {quizIsLoading ? (
+                <div className="flex items-center gap-2">
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading Quiz Info...
+                </div>
+            ) : (
+                <>
+                    {!quiz ? (
+                        <p className="text-muted-foreground mb-4">No quiz found for this lecture.</p>
+                    ) : (
+                        <p className="mb-4">Quiz "{quiz.title}" is available for this lecture.</p>
+                    )}
+                    <Link to={`/admin/lectures/${lectureId}/quiz/create`}> {/* Link to the quiz creation/edit form */}
+                        <Button className="w-full">
+                            {quiz ? 'Edit Quiz' : 'Create New Quiz'}
+                        </Button>
+                    </Link>
+                    {/* Optional: Add a button to view the quiz directly if needed for admin review */}
+                    {/* {quiz && (
+                        <Link to={`/quizzes/${quiz._id}/details`}>
+                            <Button variant="outline" className="w-full mt-2">View Quiz Details</Button>
+                        </Link>
+                    )} */}
+                </>
+            )}
         </div>
       </CardContent>
     </Card>

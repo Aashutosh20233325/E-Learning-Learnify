@@ -160,6 +160,7 @@ export const editCourse = async (req,res) => {
         })
     }
 }
+
 export const editLecture = async (req,res) => {
     try {
         const {lectureTitle, videoInfo, isPreviewFree} = req.body;
@@ -196,7 +197,6 @@ export const editLecture = async (req,res) => {
             message:"Failed to edit lectures"
         })
     }
-
 }
 export const removeLecture = async (req,res) => {
     try {
@@ -330,5 +330,6 @@ export const getPublishedCourse = async (_,res) => {
         })
     }
 }
+
 
 
