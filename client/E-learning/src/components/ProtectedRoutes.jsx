@@ -3,7 +3,7 @@ import { Navigate } from "react-router-dom";
 
 export const ProtectedRoute = ({children}) => {
     const {isAuthenticated} = useSelector(store=>store.auth);
-
+    console.log("isAuthenticated", isAuthenticated);
     if(!isAuthenticated){
         return <Navigate to="/login"/>
     }
@@ -19,7 +19,14 @@ export const AuthenticatedUser = ({children}) => {
 
     return children;
 }
+export const ProtectedVerifyRoute = ({children}) => {
 
+    const {isAuthenticated,user} = useSelector(store=>store.auth);
+    if(isAuthenticated || !user){
+        return <Navigate to="/"/>
+    }
+    return children;
+}
 export const AdminRoute = ({children}) => {
     const {user, isAuthenticated} = useSelector(store=>store.auth);
 

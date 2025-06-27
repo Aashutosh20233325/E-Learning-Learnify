@@ -9,15 +9,17 @@ import courseRoute from "./routes/course.route.js"
 import mediaRoute from "./routes/media.route.js"
 import purchaseRoute from "./routes/purchaseCourse.Route.js"
 import courseProgressRoute from "./routes/courseProgress.route.js"
+import errorHandler from "./middlewares/errorHandler.js";
+import quizRoute from "./routes/quiz.route.js";
 //call database connnection here
 connectDB();
 const app = express();
 //const PORT = 8080
 const PORT = process.env.PORT || 3000;
-app.use((req, res, next) => {
-  console.log(`[${req.method}] ${req.originalUrl} and  ${req.url} `);
-  next();
-});
+// app.use((req, res, next) => {
+//   console.log(`[${req.method}] ${req.originalUrl} and  ${req.url} `);
+//   next();
+// });
 app.use(express.json());
 app.use(cookieParser());
 app.use(cors({
@@ -29,7 +31,8 @@ app.use("/api/v1/course",courseRoute);
 app.use("/api/v1/media",mediaRoute);
 app.use("/api/v1/purchase",purchaseRoute);
 app.use("/api/v1/progress",courseProgressRoute);
-
+app.use("/api/v1/quizzes",quizRoute);
+app.use(errorHandler);
 
 app.get("/home",(_,res)=>{
      res.status(200).json({
@@ -38,6 +41,7 @@ app.get("/home",(_,res)=>{
      })
 
 })
+
 app.listen(PORT , () =>{
     console.log(`Server listen at port ${PORT}`);
 });

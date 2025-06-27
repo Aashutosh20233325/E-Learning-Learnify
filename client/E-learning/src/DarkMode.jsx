@@ -1,12 +1,12 @@
 import React from 'react';
 import { Button } from './components/ui/button';
 import { Sun, Moon } from 'lucide-react';
-import { useTheme } from './components/ThemeProvider'; // Import useTheme hook
+import { useTheme } from './components/ThemeProvider'; 
 
 const DarkMode = () => {
   const { theme, setTheme } = useTheme();
 
-  // Toggle the theme between light and dark
+
   const toggleTheme = () => {
     if (theme === "light") {
       setTheme("dark");
@@ -17,7 +17,7 @@ const DarkMode = () => {
 
   return (
     <Button onClick={toggleTheme} variant="outline" size="icon">
-      {/* Display icons based on the current theme */}
+
       {theme === "light" ? (
         <Sun className="h-[1.2rem] w-[1.2rem]" />
       ) : (

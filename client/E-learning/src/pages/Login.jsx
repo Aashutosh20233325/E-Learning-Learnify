@@ -51,6 +51,7 @@ const Login = () => {
     const { name, value } = e.target;
     if (type === "signup") {
       setSignupInput({ ...signupInput, [name]: value });
+      
     } else {
       setLoginInput({ ...loginInput, [name]: value });
     }
@@ -161,54 +162,67 @@ const defaultTab = searchParams.get("tab") || "login";
           </Card>
         </TabsContent>
         <TabsContent value="login">
-          <Card>
-            <CardHeader>
-              <CardTitle>Login</CardTitle>
-              <CardDescription>
-                Login your password here. After signup, you'll be logged in.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="space-y-1">
-                <Label htmlFor="current">Email</Label>
-                <Input
-                  type="email"
-                  name="email"
-                  value={loginInput.email}
-                  onChange={(e) => changeInputHandler(e, "login")}
-                  placeholder="Eg. patel@gmail.com"
-                  required
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="new">Password</Label>
-                <Input
-                  type="password"
-                  name="password"
-                  value={loginInput.password}
-                  onChange={(e) => changeInputHandler(e, "login")}
-                  placeholder="Eg. xyz"
-                  required
-                />
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button
-                disabled={loginIsLoading}
-                onClick={() => handleRegistration("login")}
+        <Card>
+          <CardHeader>
+            <CardTitle>Login</CardTitle>
+            <CardDescription>
+              Login your password here. After signup, you'll be logged in.
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="space-y-2">
+            <div className="space-y-1">
+              <Label htmlFor="current">Email</Label>
+              <Input
+                type="email"
+                name="email"
+                value={loginInput.email}
+                onChange={(e) => changeInputHandler(e, "login")}
+                placeholder="Eg. patel@gmail.com"
+                required
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="new">Password</Label>
+              <Input
+                type="password"
+                name="password"
+                value={loginInput.password}
+                onChange={(e) => changeInputHandler(e, "login")}
+                placeholder="Eg. xyz"
+                required
+              />
+            </div>
+
+            <div className="text-right">
+              <button
+                
+                type="button"
+                onClick={() => navigate("/reset-password")}
+                className="text-sm text-blue-600 hover:underline"
               >
-                {loginIsLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Please
-                    wait
-                  </>
-                ) : (
-                  "Login"
-                )}
-              </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
+                Forgot Password?
+              </button>
+            </div>
+          </CardContent>
+
+          <CardFooter>
+            <Button
+              disabled={loginIsLoading}
+              onClick={() => handleRegistration("login")}
+            >
+              {loginIsLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Please wait
+                </>
+              ) : (
+                "Login"
+              )}
+            </Button>
+          </CardFooter>
+        </Card>
+      </TabsContent>
+
       </Tabs>
     </div>
   );

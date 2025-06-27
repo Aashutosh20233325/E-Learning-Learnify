@@ -4,6 +4,7 @@ import { CoursePurchase } from "../models/coursePurchase.model.js";
 import { Lecture } from "../models/lecture.model.js";
 import { User } from "../models/user.model.js";
 
+// Make sure your STRIPE_SECRET_KEY is correctly loaded from environment variables
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export const createCheckoutSession = async (req, res) => {
@@ -66,77 +67,113 @@ export const createCheckoutSession = async (req, res) => {
     });
   } catch (error) {
     console.log(error);
+    return res.status(500).json({ success: false, message: "Server error during checkout session creation." });
   }
 };
 
 export const stripeWebhook = async (req, res) => {
   let event;
+  const payloadString = JSON.stringify(req.body, null, 2);
+  const secret = process.env.WEBHOOK_ENDPOINT_SECRET; // Ensure this is correctly set
 
   try {
-    const payloadString = JSON.stringify(req.body, null, 2);
-    const secret = process.env.WEBHOOK_ENDPOINT_SECRET;
+    console.log("--- Stripe Webhook Received ---");
+    // Generate a test header string only for testing, in production use req.headers['stripe-signature']
+    // For actual production, you would use:
+    // const signature = req.headers['stripe-signature'];
+    // event = stripe.webhooks.constructEvent(req.body, signature, secret);
 
+    // For testing with the provided payloadString:
     const header = stripe.webhooks.generateTestHeaderString({
       payload: payloadString,
       secret,
     });
-
     event = stripe.webhooks.constructEvent(payloadString, header, secret);
+    console.log(`Webhook Event Type: ${event.type}`);
+
   } catch (error) {
-    console.error("Webhook error:", error.message);
+    console.error("Webhook error during construction:", error.message);
     return res.status(400).send(`Webhook error: ${error.message}`);
   }
 
   // Handle the checkout session completed event
   if (event.type === "checkout.session.completed") {
-    console.log("check session complete is called");
+    console.log("checkout.session.completed event triggered.");
 
     try {
       const session = event.data.object;
+      console.log(`Session ID: ${session.id}`);
+      console.log(`Metadata - Course ID: ${session.metadata.courseId}, User ID: ${session.metadata.userId}`);
 
       const purchase = await CoursePurchase.findOne({
         paymentId: session.id,
       }).populate({ path: "courseId" });
 
       if (!purchase) {
+        console.error(`Error: Purchase record not found for paymentId: ${session.id}`);
         return res.status(404).json({ message: "Purchase not found" });
       }
 
+      console.log(`Found Purchase Record. User ID: ${purchase.userId}, Course ID (from purchase): ${purchase.courseId._id}`);
+      console.log(`Current Purchase Status: ${purchase.status}`);
+
       if (session.amount_total) {
         purchase.amount = session.amount_total / 100;
+        console.log(`Updating purchase amount to: ${purchase.amount}`);
       }
       purchase.status = "completed";
+      console.log(`Updating purchase status to: ${purchase.status}`);
 
       // Make all lectures visible by setting `isPreviewFree` to true
       if (purchase.courseId && purchase.courseId.lectures.length > 0) {
-        await Lecture.updateMany(
+        console.log(`Course has lectures. Attempting to update ${purchase.courseId.lectures.length} lectures.`);
+        const lectureUpdateResult = await Lecture.updateMany(
           { _id: { $in: purchase.courseId.lectures } },
           { $set: { isPreviewFree: true } }
         );
+        console.log(`Lectures updated. Matched: ${lectureUpdateResult.matchedCount}, Modified: ${lectureUpdateResult.modifiedCount}`);
+      } else {
+        console.log("Course has no lectures or courseId is missing from purchase.");
       }
 
       await purchase.save();
+      console.log("Purchase record saved successfully.");
 
       // Update user's enrolledCourses
-      await User.findByIdAndUpdate(
+      console.log(`Attempting to update User: ${purchase.userId} with enrolled course: ${purchase.courseId._id}`);
+      const updatedUser = await User.findByIdAndUpdate(
         purchase.userId,
         { $addToSet: { enrolledCourses: purchase.courseId._id } }, // Add course ID to enrolledCourses
-        { new: true }
+        { new: true } // Return the updated document
       );
+      if (updatedUser) {
+        console.log(`User ${updatedUser._id} enrolledCourses updated. Current enrolledCourses: ${updatedUser.enrolledCourses}`);
+      } else {
+        console.error(`Error: User with ID ${purchase.userId} not found for update.`);
+      }
+
 
       // Update course to add user ID to enrolledStudents
-      await Course.findByIdAndUpdate(
+      console.log(`Attempting to update Course: ${purchase.courseId._id} with enrolled student: ${purchase.userId}`);
+      const updatedCourse = await Course.findByIdAndUpdate(
         purchase.courseId._id,
         { $addToSet: { enrolledStudents: purchase.userId } }, // Add user ID to enrolledStudents
-        { new: true }
+        { new: true } // Return the updated document
       );
+      if (updatedCourse) {
+        console.log(`Course ${updatedCourse._id} enrolledStudents updated. Current enrolledStudents: ${updatedCourse.enrolledStudents}`);
+      } else {
+        console.error(`Error: Course with ID ${purchase.courseId._id} not found for update.`);
+      }
+
     } catch (error) {
-      console.error("Error handling event:", error);
-      return res.status(500).json({ message: "Internal Server Error" });
+      console.error("Error handling checkout.session.completed event:", error);
+      return res.status(500).json({ message: "Internal Server Error during webhook processing." });
     }
   }
   res.status(200).send();
 };
+
 export const getCourseDetailWithPurchaseStatus = async (req, res) => {
   try {
     const { courseId } = req.params;
@@ -147,7 +184,7 @@ export const getCourseDetailWithPurchaseStatus = async (req, res) => {
       .populate({ path: "lectures" });
 
     const purchased = await CoursePurchase.findOne({ userId, courseId });
-    console.log(purchased);
+    // console.log(purchased); // Keep this if you need it, but be mindful of log verbosity
 
     if (!course) {
       return res.status(404).json({ message: "course not found!" });
@@ -159,17 +196,30 @@ export const getCourseDetailWithPurchaseStatus = async (req, res) => {
     });
   } catch (error) {
     console.log(error);
+    return res.status(500).json({ message: "Server error fetching course detail." });
   }
 };
 
 export const getAllPurchasedCourse = async (_, res) => {
   try {
+    // Note: The original code used `_` for req, assuming no request object is needed.
+    // However, typically you'd need the userId from the request to get *all purchased courses for a specific user*.
+    // If this endpoint is meant to show all purchased courses across all users (e.g., for an admin), then it's fine.
+    // Assuming you meant for the authenticated user, you would need `req.id` here too.
+    // For now, I'll keep it as `getAllPurchasedCourse = async (req, res)`
+    // const userId = req.id; // Uncomment if this endpoint should be user-specific
+
     const purchasedCourse = await CoursePurchase.find({
       status: "completed",
+      // userId: userId // Uncomment if this endpoint should be user-specific
     }).populate("courseId");
-    if (!purchasedCourse) {
-      return res.status(404).json({
+
+    // console.log(purchasedCourse); // Keep this if you need it, but be mindful of log verbosity
+
+    if (!purchasedCourse || purchasedCourse.length === 0) { // Check for empty array explicitly
+      return res.status(200).json({ // Return 200 with empty array if nothing found
         purchasedCourse: [],
+        message: "No completed courses found."
       });
     }
     return res.status(200).json({
@@ -177,5 +227,6 @@ export const getAllPurchasedCourse = async (_, res) => {
     });
   } catch (error) {
     console.log(error);
+    return res.status(500).json({ message: "Server error fetching purchased courses." });
   }
 };
