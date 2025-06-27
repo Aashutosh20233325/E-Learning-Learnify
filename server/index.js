@@ -48,7 +48,7 @@ app.get("/home",(_,res)=>{
 const __dirname = path.resolve();
 
 // ✅ Correct relative path to dist folder
-const staticPath = path.join(__dirname, "../E-learning-learnify/client/E-learning/dist");
+const staticPath = path.join(__dirname, "/client/E-learning/dist");
 const indexPath = path.join(staticPath, "index.html");
 
 console.log("Static Path:", staticPath);

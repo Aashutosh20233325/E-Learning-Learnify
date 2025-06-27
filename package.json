@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "nodemon server/index.js",
     "build": "npm install && npm install --prefix client/E-learning && npm run build --prefix client/E-learning",
-    "start": "nodemon server/index.js"
+    "start": "node server/index.js"
   },
   "keywords": [],
   "author": "",
