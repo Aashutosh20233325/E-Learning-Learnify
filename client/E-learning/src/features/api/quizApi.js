@@ -1,6 +1,6 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
-const QUIZ_API = "http://localhost:8080/api/v1/quizzes/";
+const QUIZ_API = "https://devskill-hub.onrender.com/api/v1/quizzes/";
 
 export const quizApi = createApi({
     reducerPath: "quizApi",

@@ -1,5 +1,5 @@
 import React from 'react'
-import CourseTab from './Coursetab'
+import CourseTab from './CourseTab.jsx'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 
