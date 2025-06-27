@@ -1,38 +1,37 @@
 import nodemailer from 'nodemailer';
-// console.log("Nodemailer Config Check:");
-// console.log("EMAIL_HOST:", process.env.EMAIL_HOST);
-// console.log("EMAIL_PORT:", process.env.EMAIL_PORT);
-// console.log("EMAIL_SECURE:", process.env.EMAIL_SECURE); // Will be 'true' or 'false' string
-// console.log("EMAIL_USER:", process.env.EMAIL_USER); // Log the user to ensure it's there
-// console.log("EMAIL_PASS: ********"); // DO NOT log the actual password for security, just confirm its presence
-// console.log("EMAIL_FROM_ADDRESS:", process.env.EMAIL_FROM_ADDRESS);
+
 // Configure your Nodemailer transporter
 // IMPORTANT: Use environment variables for sensitive data in production
 const transporter = nodemailer.createTransport({
-    // Example for Gmail (less secure, consider app passwords or dedicated email services)
-    // service: 'gmail',
+    // --- THIS SECTION IS NOW ACTIVE FOR GMAIL ---
+    service: 'gmail', // Use 'gmail' service to connect to Google's SMTP
+    auth: {
+        // Your Gmail address (e.g., your.actual.email@gmail.com)
+        user: process.env.EMAIL_USER,
+        // Your Gmail App Password (NOT your regular password)
+        pass: process.env.EMAIL_PASS,
+    },
+    // --- END GMAIL CONFIGURATION ---
+
+    // --- THIS SECTION IS NOW COMMENTED OUT (was for generic SMTP/Ethereal) ---
+    // host: process.env.EMAIL_HOST, // e.g., smtp.sendgrid.net
+    // port: process.env.EMAIL_PORT, // e.g., 587
+    // secure: process.env.EMAIL_SECURE === 'true', // true for 465, false for other ports
     // auth: {
     //     user: process.env.EMAIL_USER,
     //     pass: process.env.EMAIL_PASS,
     // },
-
-    // Example for an SMTP server (more common for dedicated email services like SendGrid, Mailgun, etc.)
-    
-    
-    host: process.env.EMAIL_HOST, // e.g., smtp.sendgrid.net
-    port: process.env.EMAIL_PORT, // e.g., 587
-    secure: process.env.EMAIL_SECURE === 'true', // true for 465, false for other ports
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-    },
+    // --- END COMMENTED SECTION ---
 });
-
 
 export const sendEmail = async (to, subject, htmlContent) => {
     try {
         const mailOptions = {
+            // This will be the 'From' address that recipients see.
+            // It should be your Gmail address configured in EMAIL_USER.
             from: process.env.EMAIL_FROM_ADDRESS || process.env.EMAIL_USER, 
+            
+            // This 'to' is the recipient's email address, where the OTP will actually go.
             to,
             subject,
             html: htmlContent,
