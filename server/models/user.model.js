@@ -26,8 +26,11 @@ const userSchema=new mongoose.Schema({
     photoUrl:{
         type:String,
         default:""
+    },
+    isEmailVerified: {
+        type: Boolean,
+        default: false // Default to false, will be true after verification
     }
-
     },{timeStamps:true});
         
     export const User=mongoose.model("User",userSchema);

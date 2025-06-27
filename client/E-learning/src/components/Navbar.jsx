@@ -22,13 +22,13 @@ import {
   SheetTrigger,
 } from "./ui/sheet";
 import { Separator } from "@radix-ui/react-dropdown-menu";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, redirect, useNavigate } from "react-router-dom";
 import { useLogoutUserMutation } from "@/features/api/authApi";
 import { toast } from "sonner";
 import { useSelector } from "react-redux";
 
 const Navbar = () => {
-  const { user } = useSelector((store) => store.auth);
+  const { user,isAuthenticated } = useSelector((store) => store.auth);
   const [logoutUser, { data, isSuccess }] = useLogoutUserMutation();
   const navigate = useNavigate();
   const logoutHandler = async () => {
@@ -56,7 +56,7 @@ const Navbar = () => {
         </div>
         {/* User icons and dark mode icon  */}
         <div className="flex items-center gap-8">
-          {user ? (
+          {isAuthenticated ? (
              <DropdownMenu>
              <DropdownMenuTrigger asChild>
              <button>
@@ -92,10 +92,10 @@ const Navbar = () => {
             </DropdownMenu>
           ) : (
             <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={() => navigate("/login")}>
+              <Button variant="outline" onClick={() =>{ console.log("Login button clicked"); navigate("/login")}}>
                 Login
               </Button>
-              <Button onClick={() => navigate("/login")}>Signup</Button>
+              <Button onClick={() => navigate("/login?tab=signup")}>Signup</Button>
             </div>
           )}
           <DarkMode />

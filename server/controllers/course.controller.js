@@ -1,7 +1,9 @@
 import { Course } from "../models/course.model.js";
 import { Lecture } from "../models/lecture.model.js";
+import mongoose from "mongoose"; // Import mongoose to use ObjectId conversion methods
 
 import {deleteMediaFromCloudinary, deleteVideoFromCloudinary, uploadMedia} from "../utils/cloudinary.js";
+
 export const createCourse = async (req,res) => {
     try {
         const {courseTitle, category} = req.body;
@@ -13,7 +15,7 @@ export const createCourse = async (req,res) => {
         const course = await Course.create({
             courseTitle,
             category,
-            creator:req.id
+            creator:mongoose.Types.ObjectId.createFromHexString(req.id) // Use createFromHexString for req.id
         });
 
         return res.status(201).json({
@@ -28,10 +30,12 @@ export const createCourse = async (req,res) => {
         })
     }
 }
+
 export const getCreatorCourses = async (req,res) => {
     try {
         const userId = req.id;
-        const courses = await Course.find({creator:userId});
+        // Use createFromHexString for userId
+        const courses = await Course.find({creator:mongoose.Types.ObjectId.createFromHexString(userId)});
         if(!courses){
             return res.status(404).json({
                 courses:[],
@@ -48,42 +52,60 @@ export const getCreatorCourses = async (req,res) => {
         })
     }
 }
+
 export const createLecture = async (req,res) => {
     try {
-        const {lectureTitle} = req.body;
+        const {lectureTitle, videoUrl, publicId, isPreviewFree} = req.body; // Added fields from frontend
         const {courseId} = req.params;
 
-        if(!lectureTitle || !courseId){
-            return res.status(400).json({
-                message:"Lecture title is required"
-            })
-        };
-
-        // create lecture
-        const lecture = await Lecture.create({lectureTitle});
-
-        const course = await Course.findById(courseId);
-        if(course){
-            course.lectures.push(lecture._id);
-            await course.save();
+        // UPDATED: Basic validation - Only lectureTitle is required here
+        if (!lectureTitle) {
+            return res.status(400).json({ message: "Lecture title is required." });
+        }
+        
+        // Verify if the course exists and use createFromHexString
+        const course = await Course.findById(mongoose.Types.ObjectId.createFromHexString(courseId));
+        if (!course) {
+            return res.status(404).json({ message: "Course not found." });
         }
 
-        return res.status(201).json({
-            lecture,
-            message:"Lecture created successfully."
+        // Create the new lecture document
+        const newLecture = new Lecture({
+            lectureTitle,
+            videoUrl: videoUrl || null, // Make optional: use provided value or null
+            publicId: publicId || null, // Make optional: use provided value or null
+            isPreviewFree: isPreviewFree !== undefined ? isPreviewFree : false, // Make optional: use provided value or default to false
+            course: mongoose.Types.ObjectId.createFromHexString(courseId) // CRUCIAL FIX: Assign the courseId here
+        });
+
+        await newLecture.save();
+
+        // Add the new lecture's ID to the course's lectures array
+        course.lectures.push(newLecture._id);
+        await course.save();
+
+        res.status(201).json({
+            success: true,
+            message: "Lecture created successfully!",
+            lecture: newLecture,
         });
 
     } catch (error) {
-        console.log(error);
-        return res.status(500).json({
-            message:"Failed to create lecture"
-        })
+        console.error("Error in createLecture:", error);
+        // Mongoose validation errors will have an 'errors' property
+        if (error.name === 'ValidationError') {
+            const errors = Object.values(error.errors).map(err => err.message);
+            return res.status(400).json({ success: false, message: errors.join(', ') });
+        }
+        res.status(500).json({ success: false, message: "Server error creating lecture." });
     }
 }
+
 export const getCourseLecture = async (req,res) => {
     try {
         const {courseId} = req.params;
-        const course = await Course.findById(courseId).populate("lectures");
+        // Use createFromHexString for courseId and populate lectures
+        const course = await Course.findById(mongoose.Types.ObjectId.createFromHexString(courseId)).populate("lectures");
         if(!course){
             return res.status(404).json({
                 message:"Course not found"
@@ -100,11 +122,12 @@ export const getCourseLecture = async (req,res) => {
         })
     }
 }
+
 export const getCourseById = async (req,res) => {
     try {
         const {courseId} = req.params;
-
-        const course = await Course.findById(courseId);
+        // Use createFromHexString for courseId
+        const course = await Course.findById(mongoose.Types.ObjectId.createFromHexString(courseId));
 
         if(!course){
             return res.status(404).json({
@@ -121,13 +144,15 @@ export const getCourseById = async (req,res) => {
         })
     }
 }
+
 export const editCourse = async (req,res) => {
     try {
         const courseId = req.params.courseId;
         const {courseTitle, subTitle, description, category, courseLevel, coursePrice} = req.body;
         const thumbnail = req.file;
 
-        let course = await Course.findById(courseId);
+        // Use createFromHexString for courseId
+        let course = await Course.findById(mongoose.Types.ObjectId.createFromHexString(courseId));
         if(!course){
             return res.status(404).json({
                 message:"Course not found!"
@@ -143,10 +168,10 @@ export const editCourse = async (req,res) => {
             courseThumbnail = await uploadMedia(thumbnail.path);
         }
 
- 
         const updateData = {courseTitle, subTitle, description, category, courseLevel, coursePrice, courseThumbnail:courseThumbnail?.secure_url};
 
-        course = await Course.findByIdAndUpdate(courseId, updateData, {new:true});
+        // Use createFromHexString for courseId
+        course = await Course.findByIdAndUpdate(mongoose.Types.ObjectId.createFromHexString(courseId), updateData, {new:true});
 
         return res.status(200).json({
             course,
@@ -160,12 +185,14 @@ export const editCourse = async (req,res) => {
         })
     }
 }
+
 export const editLecture = async (req,res) => {
     try {
         const {lectureTitle, videoInfo, isPreviewFree} = req.body;
         
         const {courseId, lectureId} = req.params;
-        const lecture = await Lecture.findById(lectureId);
+        // Use createFromHexString for lectureId
+        const lecture = await Lecture.findById(mongoose.Types.ObjectId.createFromHexString(lectureId));
         if(!lecture){
             return res.status(404).json({
                 message:"Lecture not found!"
@@ -176,12 +203,13 @@ export const editLecture = async (req,res) => {
         if(lectureTitle) lecture.lectureTitle = lectureTitle;
         if(videoInfo?.videoUrl) lecture.videoUrl = videoInfo.videoUrl;
         if(videoInfo?.publicId) lecture.publicId = videoInfo.publicId;
-         lecture.isPreviewFree = isPreviewFree;
+        lecture.isPreviewFree = isPreviewFree;
 
         await lecture.save();
 
-        // Ensure the course still has the lecture id if it was not aleardy added;
-        const course = await Course.findById(courseId);
+        // Ensure the course still has the lecture id if it was not already added;
+        // Use createFromHexString for courseId
+        const course = await Course.findById(mongoose.Types.ObjectId.createFromHexString(courseId));
         if(course && !course.lectures.includes(lecture._id)){
             course.lectures.push(lecture._id);
             await course.save();
@@ -198,24 +226,27 @@ export const editLecture = async (req,res) => {
     }
 
 }
+
 export const removeLecture = async (req,res) => {
     try {
         const {lectureId} = req.params;
-        const lecture = await Lecture.findByIdAndDelete(lectureId);
+        // Use createFromHexString for lectureId
+        const lecture = await Lecture.findByIdAndDelete(mongoose.Types.ObjectId.createFromHexString(lectureId));
         if(!lecture){
             return res.status(404).json({
                 message:"Lecture not found!"
             });
         }
-        // delete the lecture from couldinary as well
+        // delete the lecture from cloudinary as well
         if(lecture.publicId){
             await deleteVideoFromCloudinary(lecture.publicId);
         }
 
         // Remove the lecture reference from the associated course
+        // Use createFromHexString for lectureId
         await Course.updateOne(
-            {lectures:lectureId}, // find the course that contains the lecture
-            {$pull:{lectures:lectureId}} // Remove the lectures id from the lectures array
+            {lectures: mongoose.Types.ObjectId.createFromHexString(lectureId)}, // find the course that contains the lecture
+            {$pull:{lectures: mongoose.Types.ObjectId.createFromHexString(lectureId)}} // Remove the lectures id from the lectures array
         );
 
         return res.status(200).json({
@@ -228,10 +259,12 @@ export const removeLecture = async (req,res) => {
         })
     }
 }
+
 export const getLectureById = async (req,res) => {
     try {
         const {lectureId} = req.params;
-        const lecture = await Lecture.findById(lectureId);
+        // Use createFromHexString for lectureId
+        const lecture = await Lecture.findById(mongoose.Types.ObjectId.createFromHexString(lectureId));
         if(!lecture){
             return res.status(404).json({
                 message:"Lecture not found!"
@@ -247,11 +280,13 @@ export const getLectureById = async (req,res) => {
         })
     }
 }
+
 export const togglePublishCourse = async (req,res) => {
     try {
         const {courseId} = req.params;
         const {publish} = req.query; // true, false
-        const course = await Course.findById(courseId);
+        // Use createFromHexString for courseId
+        const course = await Course.findById(mongoose.Types.ObjectId.createFromHexString(courseId));
         if(!course){
             return res.status(404).json({
                 message:"Course not found!"
@@ -272,6 +307,7 @@ export const togglePublishCourse = async (req,res) => {
         })
     }
 }
+
 export const searchCourse = async (req,res) => {
     try {
         const {query = "", categories = [], sortByPrice =""} = req.query;
@@ -300,6 +336,7 @@ export const searchCourse = async (req,res) => {
             sortOptions.coursePrice = -1; // descending
         }
 
+        // No direct ObjectId conversion needed for string/array query parameters if Mongoose handles casting
         let courses = await Course.find(searchCriteria).populate({path:"creator", select:"name photoUrl"}).sort(sortOptions);
 
         return res.status(200).json({
@@ -309,11 +346,15 @@ export const searchCourse = async (req,res) => {
 
     } catch (error) {
         console.log(error);
-        
+        return res.status(500).json({ // Added status for consistency
+            message: "Failed to search courses"
+        });
     }
 }
+
 export const getPublishedCourse = async (_,res) => {
     try {
+        // No direct ObjectId conversion needed for this query
         const courses = await Course.find({isPublished:true}).populate({path:"creator", select:"name photoUrl"});
         if(!courses){
             return res.status(404).json({
@@ -330,5 +371,3 @@ export const getPublishedCourse = async (_,res) => {
         })
     }
 }
-
-

@@ -16,7 +16,7 @@ import {
 } from "@/features/api/authApi";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate ,useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
 const Login = () => {
@@ -51,13 +51,22 @@ const Login = () => {
     const { name, value } = e.target;
     if (type === "signup") {
       setSignupInput({ ...signupInput, [name]: value });
+      
     } else {
       setLoginInput({ ...loginInput, [name]: value });
     }
   };
 
+
+
+const [searchParams] = useSearchParams();
+const defaultTab = searchParams.get("tab") || "login";
+
+
+
   const handleRegistration = async (type) => {
     const inputData = type === "signup" ? signupInput : loginInput;
+    console.log("clicked on", type, "with data:", inputData);
     const action = type === "signup" ? registerUser : loginUser;
     await action(inputData);
   };
@@ -87,7 +96,7 @@ const Login = () => {
 
   return (
     <div className="flex items-center w-full justify-center mt-20">
-      <Tabs defaultValue="login" className="w-[400px]">
+      <Tabs defaultValue={defaultTab} className="w-[400px]">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="signup">Signup</TabsTrigger>
           <TabsTrigger value="login">Login</TabsTrigger>
@@ -109,7 +118,7 @@ const Login = () => {
                   value={signupInput.name}
                   onChange={(e) => changeInputHandler(e, "signup")}
                   placeholder="Eg. patel"
-                  required="true"
+                  required 
                 />
               </div>
               <div className="space-y-1">
@@ -120,7 +129,7 @@ const Login = () => {
                   value={signupInput.email}
                   onChange={(e) => changeInputHandler(e, "signup")}
                   placeholder="Eg. patel@gmail.com"
-                  required="true"
+                  required
                 />
               </div>
               <div className="space-y-1">
@@ -131,7 +140,7 @@ const Login = () => {
                   value={signupInput.password}
                   onChange={(e) => changeInputHandler(e, "signup")}
                   placeholder="Eg. xyz"
-                  required="true"
+                  required
                 />
               </div>
             </CardContent>
@@ -153,54 +162,67 @@ const Login = () => {
           </Card>
         </TabsContent>
         <TabsContent value="login">
-          <Card>
-            <CardHeader>
-              <CardTitle>Login</CardTitle>
-              <CardDescription>
-                Login your password here. After signup, you'll be logged in.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="space-y-1">
-                <Label htmlFor="current">Email</Label>
-                <Input
-                  type="email"
-                  name="email"
-                  value={loginInput.email}
-                  onChange={(e) => changeInputHandler(e, "login")}
-                  placeholder="Eg. patel@gmail.com"
-                  required="true"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="new">Password</Label>
-                <Input
-                  type="password"
-                  name="password"
-                  value={loginInput.password}
-                  onChange={(e) => changeInputHandler(e, "login")}
-                  placeholder="Eg. xyz"
-                  required="true"
-                />
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button
-                disabled={loginIsLoading}
-                onClick={() => handleRegistration("login")}
+        <Card>
+          <CardHeader>
+            <CardTitle>Login</CardTitle>
+            <CardDescription>
+              Login your password here. After signup, you'll be logged in.
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="space-y-2">
+            <div className="space-y-1">
+              <Label htmlFor="current">Email</Label>
+              <Input
+                type="email"
+                name="email"
+                value={loginInput.email}
+                onChange={(e) => changeInputHandler(e, "login")}
+                placeholder="Eg. patel@gmail.com"
+                required
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="new">Password</Label>
+              <Input
+                type="password"
+                name="password"
+                value={loginInput.password}
+                onChange={(e) => changeInputHandler(e, "login")}
+                placeholder="Eg. xyz"
+                required
+              />
+            </div>
+
+            <div className="text-right">
+              <button
+                
+                type="button"
+                onClick={() => navigate("/reset-password")}
+                className="text-sm text-blue-600 hover:underline"
               >
-                {loginIsLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Please
-                    wait
-                  </>
-                ) : (
-                  "Login"
-                )}
-              </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
+                Forgot Password?
+              </button>
+            </div>
+          </CardContent>
+
+          <CardFooter>
+            <Button
+              disabled={loginIsLoading}
+              onClick={() => handleRegistration("login")}
+            >
+              {loginIsLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Please wait
+                </>
+              ) : (
+                "Login"
+              )}
+            </Button>
+          </CardFooter>
+        </Card>
+      </TabsContent>
+
       </Tabs>
     </div>
   );
