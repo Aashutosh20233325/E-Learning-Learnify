@@ -11,6 +11,7 @@ import purchaseRoute from "./routes/purchaseCourse.Route.js"
 import courseProgressRoute from "./routes/courseProgress.route.js"
 import errorHandler from "./middlewares/errorHandler.js";
 import quizRoute from "./routes/quiz.route.js";
+import path from "path";
 //call database connnection here
 connectDB();
 const app = express();
@@ -20,6 +21,7 @@ const PORT = process.env.PORT || 3000;
 //   console.log(`[${req.method}] ${req.originalUrl} and  ${req.url} `);
 //   next();
 // });
+
 app.use(express.json());
 app.use(cookieParser());
 app.use(cors({
@@ -41,6 +43,23 @@ app.get("/home",(_,res)=>{
      })
 
 })
+
+
+const __dirname = path.resolve();
+
+// ✅ Correct relative path to dist folder
+const staticPath = path.join(__dirname, "../E-learning-learnify/client/E-learning/dist");
+const indexPath = path.join(staticPath, "index.html");
+
+console.log("Static Path:", staticPath);
+console.log("Index Path:", indexPath);
+
+app.use(express.static(staticPath));
+
+app.get("*", (_, res) => {
+  res.sendFile(indexPath);
+});
+
 
 app.listen(PORT , () =>{
     console.log(`Server listen at port ${PORT}`);
