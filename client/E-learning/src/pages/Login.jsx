@@ -117,7 +117,7 @@ const defaultTab = searchParams.get("tab") || "login";
                   name="name"
                   value={signupInput.name}
                   onChange={(e) => changeInputHandler(e, "signup")}
-                  placeholder="Eg. patel"
+                  placeholder="Eg. sneha"
                   required 
                 />
               </div>
@@ -128,7 +128,7 @@ const defaultTab = searchParams.get("tab") || "login";
                   name="email"
                   value={signupInput.email}
                   onChange={(e) => changeInputHandler(e, "signup")}
-                  placeholder="Eg. patel@gmail.com"
+                  placeholder="Eg. sneha@gmail.com"
                   required
                 />
               </div>
@@ -178,7 +178,7 @@ const defaultTab = searchParams.get("tab") || "login";
                 name="email"
                 value={loginInput.email}
                 onChange={(e) => changeInputHandler(e, "login")}
-                placeholder="Eg. patel@gmail.com"
+                placeholder="Eg. sneha@gmail.com"
                 required
               />
             </div>
