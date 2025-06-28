@@ -14,39 +14,37 @@ import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-
+import { Checkbox } from '@/components/ui/checkbox';
 
 import {
     useGetQuizDetailsForStudentQuery,
     useSubmitQuizAttemptMutation,
     useStartQuizAttemptMutation
-} from '../../features/api/quizApi'; 
+} from '../../features/api/quizApi';
 
-import { useLoadUserQuery } from '../../features/api/authApi'; 
+import { useLoadUserQuery } from '../../features/api/authApi';
+
 const QuizTakingPage = () => {
     const { quizId } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
 
- 
-    const { data: userData, isLoading: userLoading, isError: userError } = useLoadUserQuery();
+    const { data: userData, isLoading: userLoading, isError: userError, error: authError } = useLoadUserQuery();
     const userId = userData?.user?._id;
 
     const [studentAnswers, setStudentAnswers] = useState({});
-
-    const [quizSession, setQuizSession] = useState(null); 
-    const [timeLeft, setTimeLeft] = useState(null); 
-    const timerIntervalRef = useRef(null); 
-
+    const [quizSession, setQuizSession] = useState(null);
+    const [timeLeft, setTimeLeft] = useState(null);
+    const timerIntervalRef = useRef(null);
     const hasInitiatedSessionRef = useRef(false);
 
-    
     const {
         data: quizData,
         isLoading: quizIsLoading,
         isError: quizIsError,
         error: quizError,
-    } = useGetQuizDetailsForStudentQuery(quizId, { skip: !quizId });
+        refetch: refetchQuizDetails
+    } = useGetQuizDetailsForStudentQuery(quizId, { skip: !quizId || !userId });
 
     const [startQuiz, { isLoading: startQuizLoading, isError: startQuizError, error: startQuizErrorData }] = useStartQuizAttemptMutation();
     const [submitQuiz, { isLoading: submitLoading, isSuccess: submitSuccess, isError: submitMutationError, error: submitErrorData, data: submitResultData }] = useSubmitQuizAttemptMutation();
@@ -54,7 +52,99 @@ const QuizTakingPage = () => {
     const quiz = quizData?.quiz;
     const questions = quizData?.questions || [];
 
+    // --- EFFECT: Handle Quiz Session Initialization and Timer Setup ---
+    useEffect(() => {
+        if (userLoading || quizIsLoading || !quizId) return;
+
+        if (userError) {
+            toast.error(authError?.data?.message || "You must be logged in to take this quiz.");
+            navigate('/login', { state: { from: location.pathname } });
+            return;
+        }
+        
+        if (!userId) {
+            return;
+        }
+
+        if (quizIsError) {
+            toast.error(quizError?.data?.message || "Failed to load quiz details.");
+            navigate('/dashboard');
+            return;
+        }
+
+        if (quiz && !hasInitiatedSessionRef.current) {
+            if (quizData.quizSession) {
+                setQuizSession(quizData.quizSession);
+                const timeRemaining = Math.floor((new Date(quizData.quizSession.endTime).getTime() - Date.now()) / 1000);
+                setTimeLeft(Math.max(0, timeRemaining));
+                hasInitiatedSessionRef.current = true;
+                toast.info("Resuming quiz session.");
+            } else if (quiz.duration > 0) {
+                const initiateQuizSession = async () => {
+                    try {
+                        const newSession = await startQuiz({ quizId, userId }).unwrap();
+                        setQuizSession(newSession.session);
+                        const initialTimeRemaining = Math.floor((new Date(newSession.session.endTime).getTime() - Date.now()) / 1000);
+                        setTimeLeft(Math.max(0, initialTimeRemaining));
+                        hasInitiatedSessionRef.current = true;
+                        toast.success("Quiz started! Good luck.");
+                    } catch (err) {
+                        toast.error(err?.data?.message || "Failed to start quiz session.");
+                        navigate('/dashboard');
+                    }
+                };
+                initiateQuizSession();
+            } else {
+                setTimeLeft(Infinity);
+                hasInitiatedSessionRef.current = true;
+                toast.info("Untimed quiz started.");
+            }
+        }
+    }, [quizData, userId, userLoading, quizIsLoading, quizIsError, userError, quizError, quizId, startQuiz, navigate, location.pathname, quiz]);
+
+    // --- EFFECT: Timer Countdown Logic ---
+    useEffect(() => {
+        if (timeLeft === null || timeLeft === Infinity || !quizSession) {
+            clearInterval(timerIntervalRef.current);
+            return;
+        }
+
+        if (timeLeft <= 0) {
+            clearInterval(timerIntervalRef.current);
+            if (quizSession && !submitLoading && !submitSuccess) {
+                handleSubmitQuiz(true);
+            }
+            return;
+        }
+
+        timerIntervalRef.current = setInterval(() => {
+            setTimeLeft(prevTime => {
+                if (prevTime <= 1) {
+                    clearInterval(timerIntervalRef.current);
+                    return 0;
+                }
+                return prevTime - 1;
+            });
+        }, 1000);
+
+        return () => clearInterval(timerIntervalRef.current);
+    }, [timeLeft, quizSession, submitLoading, submitSuccess, handleSubmitQuiz]);
+
+    // --- EFFECT: Handle Quiz Submission Success/Error ---
+    useEffect(() => {
+        if (submitSuccess && submitResultData) {
+            toast.success("Quiz submitted successfully!");
+            navigate(`/quizzes/result/${quizSession._id}`);
+        }
+        if (submitMutationError) {
+            toast.error(submitErrorData?.data?.message || "Failed to submit quiz.");
+        }
+    }, [submitSuccess, submitMutationError, submitErrorData, navigate, quizSession]);
+
+
     const handleSubmitQuiz = useCallback(async (isAutoSubmit = false) => {
+        console.log(`QuizTakingPage: handleSubmitQuiz called (isAutoSubmit: ${isAutoSubmit})`, { quizId, quizSession, timeLeft });
+
         if (!quizId) {
             toast.error("Cannot submit quiz: Quiz ID is missing.");
             return;
@@ -70,259 +160,48 @@ const QuizTakingPage = () => {
 
         const answersToSubmit = {};
         questions.forEach(q => {
-            if (studentAnswers[q._id]) {
-                answersToSubmit[q._id] = studentAnswers[q._id];
-            } else {
-                
-                answersToSubmit[q._id] = {
-                    type: q.type,
-                    submittedAnswerText: '',
-                    selectedOptionIds: []
-                };
-            }
+            answersToSubmit[q._id] = studentAnswers[q._id] || {
+                type: q.type,
+                submittedAnswerText: '',
+                selectedOptionIds: []
+            };
         });
-    
-        setStudentAnswers(answersToSubmit);
-
 
         if (!isAutoSubmit) {
-            if (questions.length > 0 && Object.keys(answersToSubmit).length !== questions.length) { 
-                toast.error("Please answer all questions before submitting.");
-                return;
-            }
             for (const q of questions) {
-                const answer = answersToSubmit[q._id]; 
-                if (!answer) { 
+                const answer = answersToSubmit[q._id];
+                if (!answer) {
                     toast.error(`Please answer all questions. Question ${questions.indexOf(q) + 1} is unanswered.`);
                     return;
                 }
                 if ((q.type === 'multiple_choice' || q.type === 'true_false' || q.type === 'multi_select') && (!answer.selectedOptionIds || answer.selectedOptionIds.length === 0)) {
-                    toast.error(`Please select an option for Question ${questions.indexOf(q) + 1}.`);
-                    return;
+                    return toast.error(`Please select an option for Question ${questions.indexOf(q) + 1}.`);
                 } else if (q.type === 'short_answer' && (!answer.submittedAnswerText || answer.submittedAnswerText.trim() === '')) {
-                    toast.error(`Please provide an answer for Question ${questions.indexOf(q) + 1}.`);
-                    return;
+                    return toast.error(`Please provide an answer for Question ${questions.indexOf(q) + 1}.`);
                 }
             }
         }
 
-        console.log("QuizTakingPage: Current studentAnswers state before submission:", JSON.stringify(answersToSubmit, null, 2));
-
         const submissionPayload = {
             quizId,
             quizSessionId: quizSession._id,
-            answers: Object.keys(answersToSubmit).map(questionId => { 
+            answers: Object.keys(answersToSubmit).map(questionId => {
                 const answerData = answersToSubmit[questionId];
                 return {
                     questionId,
                     questionType: answerData.type,
-                    
                     submittedAnswerText: answerData.submittedAnswerText || '',
-                   
                     selectedOptionIds: answerData.selectedOptionIds || []
                 };
             })
         };
 
-        console.log("QuizTakingPage: Submitting answers payload to backend:", JSON.stringify(submissionPayload, null, 2));
         try {
             await submitQuiz(submissionPayload).unwrap();
         } catch (err) {
-            console.error("QuizTakingPage: Error during submitQuiz mutation:", err);
-            toast.error(err?.data?.message || "Failed to submit quiz.");
+            // Error handled by useEffect
         }
-    }, [quizId, quizSession, studentAnswers, questions, submitQuiz, timeLeft]); 
-
-    const sessionLogicRef = useRef(null);
-
-    sessionLogicRef.current = async () => {
-        const isFreshStartFromNav = location.state?.newSession; 
-        const storedSessionKey = `quizSession_${quizId}_${userId}`;
-        let storedSession = null;
-
-
-        if (quiz.duration === null || quiz.duration === undefined || quiz.duration <= 0) {
-            console.log("Quiz is untimed. No timer needed.");
-            setQuizSession({ _id: 'untimed', startTime: new Date().toISOString(), durationMinutes: Infinity, quizId, userId });
-            setTimeLeft(Infinity); 
-            
-            localStorage.removeItem(storedSessionKey);
-            return;
-        }
-
-        
-        if (!isFreshStartFromNav) {
-            try {
-                const stored = localStorage.getItem(storedSessionKey);
-                if (stored) {
-                    storedSession = JSON.parse(stored);
-                    
-                    if (storedSession.quizId !== quizId || storedSession.userId !== userId || !storedSession.startTime || storedSession.durationMinutes === undefined) {
-                        console.warn("Stored session found but mismatched or incomplete. Discarding.");
-                        localStorage.removeItem(storedSessionKey);
-                        storedSession = null;
-                    }
-                }
-            } catch (e) {
-                console.error("Failed to parse stored quiz session from localStorage, clearing data:", e);
-                localStorage.removeItem(storedSessionKey); 
-                storedSession = null;
-            }
-        } else {
-       
-            localStorage.removeItem(storedSessionKey);
-            console.log(`Fresh start detected (from navigation): Cleared local storage for quiz session: ${storedSessionKey}`);
-        }
-
-        if (storedSession) { 
-            const startTimestamp = new Date(storedSession.startTime).getTime();
-            const durationMs = storedSession.durationMinutes * 60 * 1000;
-            const elapsedMs = Date.now() - startTimestamp;
-            const remainingMs = durationMs - elapsedMs;
-
-            if (remainingMs <= 0) {
-                console.log("Local storage quiz session has already timed out. Auto-submitting (if not already).");
-                setTimeLeft(0);
-               
-                if (!submitLoading && !submitSuccess) {
-                    await handleSubmitQuiz(true); 
-                }
-                localStorage.removeItem(storedSessionKey); 
-                toast.error("Your previous quiz session timed out. Please start a new one.");
-            } else {
-                setQuizSession(storedSession);
-                setTimeLeft(Math.ceil(remainingMs / 1000));
-                toast.info("Quiz session resumed from previous attempt.");
-            }
-        } else { 
-            console.log("No valid stored session found or fresh start initiated. Attempting to start a new quiz session via backend.");
-            try {
-                const result = await startQuiz(quizId).unwrap();
-                const newSession = result.quizSession;
-
-                localStorage.setItem(storedSessionKey, JSON.stringify(newSession));
-                setQuizSession(newSession);// Initialize with full duration
-                
-                toast.success("New quiz session started!");
-            } catch (err) {
-                console.error("Failed to start new quiz session from backend:", err);
-                toast.error(err?.data?.message || "Failed to start quiz. Please try again.");
-            }
-        }
-    };
-
-    // Main useEffect for managing session initiation
-    useEffect(() => {
-     
-        if (hasInitiatedSessionRef.current || !quizId || !userId || quizIsLoading || userLoading || !quizData || !quizData.quiz) {
-            if (!hasInitiatedSessionRef.current) {
-                console.log("QuizTakingPage: Main Effect waiting for data or already initiated.", {
-                    quizId, userId, userLoading, quizIsLoading, quizData: !!quizData, quizDataQuiz: !!quizData?.quiz, hasInitiatedSessionRef: hasInitiatedSessionRef.current
-                });
-            }
-            return;
-        }
-
-        // Mark that session initiation has started for this component instance
-        hasInitiatedSessionRef.current = true; // Set this flag here
-
-        // Execute the session logic defined in the ref
-        sessionLogicRef.current();
-
-        // Cleanup function for this useEffect
-        return () => {
-            // Clear timer interval on component unmount
-            if (timerIntervalRef.current) {
-                clearInterval(timerIntervalRef.current);
-                timerIntervalRef.current = null;
-            }
-            // Do NOT reset hasInitiatedSessionRef.current here. It should persist for the component's lifespan.
-        };
-    }, [quizId, userId, userLoading, quizIsLoading, quizData, location.state?.newSession]); // Dependencies for this main effect
-
-    // Effect for the countdown timer itself (isolated)
-    useEffect(() => {
-        if (timeLeft === null || timeLeft === Infinity || !quizSession) {
-            return;
-        }
-
-        // Clear any existing interval before setting a new one
-        if (timerIntervalRef.current) {
-            clearInterval(timerIntervalRef.current);
-        }
-
-        if (timeLeft > 0) {
-            const interval = setInterval(() => {
-                setTimeLeft(prev => {
-                    if (prev <= 1) {
-                        clearInterval(timerIntervalRef.current);
-                        timerIntervalRef.current = null; // Ensure ref is cleared
-                        toast.error("Time's up! Submitting your quiz...");
-                        handleSubmitQuiz(true);
-                        return 0;
-                    }
-                    return prev - 1;
-                });
-            }, 1000);
-            timerIntervalRef.current = interval;
-        } else if (timeLeft === 0) {
-            if (timerIntervalRef.current) {
-                clearInterval(timerIntervalRef.current);
-                timerIntervalRef.current = null;
-            }
-        }
-
-        return () => {
-            if (timerIntervalRef.current) {
-                clearInterval(timerIntervalRef.current);
-                timerIntervalRef.current = null;
-            }
-        };
-    }, [timeLeft, handleSubmitQuiz, quizSession]); 
-
-
-    useEffect(() => {
-        if (!quizId) {
-            toast.error("No Quiz ID provided in the URL.");
-            navigate(-1);
-            return;
-        }
-
-        if (quizIsError) {
-            console.error("QuizTakingPage: Error fetching quiz for student:", quizError);
-            toast.error(quizError?.data?.message || "Failed to load quiz. Please try again later.");
-            setTimeout(() => navigate(-1), 2000);
-        }
-    }, [quizId, quizIsError, quizError, navigate]);
-
-
-    useEffect(() => {
-        if (submitSuccess && submitResultData) {
-            toast.success(submitResultData.message || "Quiz submitted successfully!");
-            
-            localStorage.removeItem(`quizSession_${quizId}_${userId}`);
-
-           
-            if (timerIntervalRef.current) {
-                clearInterval(timerIntervalRef.current);
-                timerIntervalRef.current = null;
-            }
-
-            if (submitResultData.attemptId) {
-                console.log("QuizTakingPage: Navigating to quiz results page with attemptId:", submitResultData.attemptId);
-                navigate(`/quiz/results/${submitResultData.attemptId}`);
-            } else {
-                toast.info("Quiz submitted. Results might be available on your quiz attempts page.");
-                navigate('/my-learning/quizzes'); 
-            }
-        }
-        if (submitMutationError && submitErrorData) {
-            console.error("QuizTakingPage: Error submitting quiz:", submitErrorData);
-            toast.error(submitErrorData.data?.message || "Failed to submit quiz.");
-        }
-    }, [submitSuccess, submitResultData, submitMutationError, submitErrorData, navigate, quizId, userId]);
-
-
+    }, [quizId, quizSession, studentAnswers, questions, submitQuiz, timeLeft]);
 
     const handleAnswerChange = (questionId, type, newTextValue, selectedOptionId = null) => {
         setStudentAnswers(prevAnswers => {
@@ -334,15 +213,18 @@ const QuizTakingPage = () => {
                 case 'true_false':
                     updatedAnswer = {
                         ...currentAnswer,
-                        selectedOptionIds: [selectedOptionId].filter(Boolean), 
-                        submittedAnswerText: newTextValue // Store the text value of the selected option
+                        selectedOptionIds: [selectedOptionId].filter(Boolean),
+                        submittedAnswerText: newTextValue
                     };
                     break;
                 case 'multi_select':
                     const currentSelected = currentAnswer.selectedOptionIds || [];
-                    const newSelectedOptions = currentSelected.includes(selectedOptionId)
-                        ? currentSelected.filter(id => id !== selectedOptionId)
-                        : [...currentSelected, selectedOptionId];
+                    const newSelectedOptions = selectedOptionId
+                        ? (currentSelected.includes(selectedOptionId)
+                            ? currentSelected.filter(id => id !== selectedOptionId)
+                            : [...currentSelected, selectedOptionId])
+                        : currentSelected;
+
                     updatedAnswer = {
                         ...currentAnswer,
                         selectedOptionIds: newSelectedOptions.filter(Boolean),
@@ -357,7 +239,6 @@ const QuizTakingPage = () => {
                 default:
                     updatedAnswer = { ...currentAnswer, submittedAnswerText: newTextValue };
             }
-            console.log(`QuizTakingPage: Updating question ${questionId}:`, updatedAnswer);
             return {
                 ...prevAnswers,
                 [questionId]: updatedAnswer
@@ -365,38 +246,50 @@ const QuizTakingPage = () => {
         });
     };
 
-    // Format time for display (MM:SS)
     const formatTime = (seconds) => {
+        if (seconds === null) return "--:--";
         if (seconds === Infinity) return "No Time Limit";
-        if (seconds < 0 || isNaN(seconds)) return "00:00"; 
+        if (seconds < 0 || isNaN(seconds)) return "00:00";
         const minutes = Math.floor(seconds / 60);
         const remainingSeconds = seconds % 60;
         return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
     };
 
-
-    if (quizIsLoading || userLoading || (quiz?.duration > 0 && (timeLeft === null || !quizSession))) {
+    if (userLoading || quizIsLoading || startQuizLoading) {
         return (
-            <div className="flex justify-center items-center h-screen bg-gray-50 dark:bg-gray-900">
-                <Loader2 className="h-10 w-10 animate-spin text-blue-500" />
-                <p className="ml-3 text-xl text-gray-700 dark:text-gray-300">Loading Quiz...</p>
+            <div className="flex justify-center items-center h-screen bg-gray-100 dark:bg-gray-900">
+                <Loader2 className="h-12 w-12 animate-spin text-blue-500" />
+                <p className="ml-4 text-xl text-gray-700 dark:text-gray-300">Loading Quiz...</p>
             </div>
         );
     }
 
-    if (quizIsError || userError || startQuizError || !quiz || questions.length === 0) {
-        let errorMessage = "Failed to load quiz.";
-        if (quizIsError) errorMessage = quizError?.data?.message || "Failed to load quiz.";
-        else if (userError) errorMessage = "Failed to load user data. Please log in.";
-        else if (startQuizError) errorMessage = startQuizErrorData?.data?.message || "Failed to start quiz session.";
-        else if (!quiz || questions.length === 0) errorMessage = "Quiz not found or no questions available.";
-
+    if (userError) {
         return (
-            <div className="flex flex-col justify-center items-center h-screen bg-gray-50 dark:bg-gray-900">
-                <p className="text-xl text-red-600 dark:text-red-400">
-                    {errorMessage}
-                </p>
-                <Button onClick={() => navigate(-1)} className="mt-4 bg-blue-600 hover:bg-blue-700 text-white">Go Back</Button>
+            <div className="flex flex-col justify-center items-center h-screen text-red-600 dark:text-red-400">
+                <p className="text-2xl font-bold">Authentication Error</p>
+                <p className="text-lg mt-2">{authError?.data?.message || "Please log in to access this page."}</p>
+                <Button onClick={() => navigate('/login')} className="mt-4">Go to Login</Button>
+            </div>
+        );
+    }
+
+    if (quizIsError) {
+        return (
+            <div className="flex flex-col justify-center items-center h-screen text-red-600 dark:text-red-400">
+                <p className="text-2xl font-bold">Error Loading Quiz</p>
+                <p className="text-lg mt-2">{quizError?.data?.message || "Could not retrieve quiz details. Please try again."}</p>
+                <Button onClick={() => navigate('/dashboard')} className="mt-4">Go to Dashboard</Button>
+            </div>
+        );
+    }
+
+    if (!quiz) {
+        return (
+            <div className="flex flex-col justify-center items-center h-screen text-gray-600 dark:text-gray-400">
+                <p className="text-2xl font-bold">Quiz Not Found</p>
+                <p className="text-lg mt-2">The quiz you are looking for does not exist or you do not have access.</p>
+                <Button onClick={() => navigate('/dashboard')} className="mt-4">Go to Dashboard</Button>
             </div>
         );
     }
@@ -406,12 +299,12 @@ const QuizTakingPage = () => {
             <Card className="rounded-lg border-none shadow-none">
                 <CardHeader className="bg-gradient-to-r from-teal-500 to-cyan-600 text-white p-6 rounded-t-lg flex justify-between items-center">
                     <div>
-                        <CardTitle className="text-3xl font-bold">{quiz.title}</CardTitle>
+                        <CardTitle className="text-3xl font-bold">{quiz?.title}</CardTitle>
                         <CardDescription className="text-teal-100 mt-2 text-lg">
-                            {quiz.description || 'Attempt this quiz to test your knowledge!'}
+                            {quiz?.description || 'Attempt this quiz to test your knowledge!'}
                         </CardDescription>
                     </div>
-                    {quiz.duration && quiz.duration > 0 ? (
+                    {quiz?.duration && quiz.duration > 0 ? (
                         <div className="text-right flex flex-col items-end">
                             <p className="text-teal-100 text-md font-semibold">Time Left:</p>
                             <p className="text-4xl font-extrabold text-white">
@@ -423,6 +316,9 @@ const QuizTakingPage = () => {
                     )}
                 </CardHeader>
                 <CardContent className="p-6 space-y-8">
+                    {questions.length === 0 && (
+                        <p className="text-center text-gray-600 dark:text-gray-400 text-xl">No questions available for this quiz.</p>
+                    )}
                     {questions.map((question, qIndex) => (
                         <Card key={question._id} className="p-5 border-2 border-gray-200 dark:border-gray-700 rounded-md shadow-sm bg-gray-50 dark:bg-gray-700">
                             <CardTitle className="text-xl font-semibold mb-3 text-gray-900 dark:text-gray-100">
@@ -430,7 +326,7 @@ const QuizTakingPage = () => {
                                 <span className="float-right text-base text-gray-600 dark:text-gray-300">{question.points} Points</span>
                             </CardTitle>
                             <div className="mt-4">
-                                {question.type === 'multiple_choice' || question.type === 'true_false' ? (
+                                {(question.type === 'multiple_choice' || question.type === 'true_false') ? (
                                     <RadioGroup
                                         onValueChange={(selectedOptionId) => {
                                             const selectedOption = question.options.find(opt => opt._id === selectedOptionId);
@@ -453,6 +349,22 @@ const QuizTakingPage = () => {
                                             </div>
                                         ))}
                                     </RadioGroup>
+                                ) : question.type === 'multi_select' ? (
+                                    <div className="space-y-3">
+                                        {question.options.map((option) => (
+                                            <div key={option._id} className="flex items-center space-x-3 p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors duration-150">
+                                                <Checkbox
+                                                    id={`checkbox-option-${question._id}-${option._id}`}
+                                                    checked={studentAnswers[question._id]?.selectedOptionIds?.includes(option._id) || false}
+                                                    onCheckedChange={() => handleAnswerChange(question._id, question.type, '', option._id)}
+                                                    disabled={timeLeft === 0}
+                                                />
+                                                <Label htmlFor={`checkbox-option-${question._id}-${option._id}`} className="text-lg font-normal text-gray-800 dark:text-gray-200 flex-grow cursor-pointer">
+                                                    {option.text}
+                                                </Label>
+                                            </div>
+                                        ))}
+                                    </div>
                                 ) : question.type === 'short_answer' ? (
                                     <Textarea
                                         placeholder="Type your answer here..."
@@ -471,7 +383,7 @@ const QuizTakingPage = () => {
                 <CardFooter className="flex justify-end p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 rounded-b-lg">
                     <Button
                         onClick={() => handleSubmitQuiz(false)}
-                        disabled={submitLoading || timeLeft === 0}
+                        disabled={submitLoading || timeLeft === 0 || !quizSession}
                         className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-200 ease-in-out flex items-center gap-2"
                     >
                         {submitLoading ? (
