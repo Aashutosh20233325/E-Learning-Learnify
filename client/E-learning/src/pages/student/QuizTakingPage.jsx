@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { toast } from 'sonner';
+// import { toast } from 'sonner'; // Removed toast import
 import { Loader2 } from 'lucide-react';
 import {
     Card,
@@ -14,6 +14,8 @@ import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+
 
 import {
     useGetQuizDetailsForStudentQuery,
@@ -28,18 +30,16 @@ const QuizTakingPage = () => {
     const navigate = useNavigate();
     const location = useLocation();
 
-    // console.log("QuizTakingPage: Component Rendered", { quizId, locationState: location.state });
+    // console.log("QuizTakingPage: Component Rendered", { quizId, locationState: location.state }); // Removed console.log
 
     const { data: userData, isLoading: userLoading, isError: userError } = useLoadUserQuery();
     const userId = userData?.user?._id;
-    // console.log("QuizTakingPage: User data status", { userData, userId, userLoading, userError });
+    // console.log("QuizTakingPage: User data status", { userData, userId, userLoading, userError }); // Removed console.log
 
     const [studentAnswers, setStudentAnswers] = useState({});
     const [quizSession, setQuizSession] = useState(null);
-    const [timeLeft, setTimeLeft] = useState(null); // null means uninitialized, Infinity for untimed, number for timed
+    const [timeLeft, setTimeLeft] = useState(null);
     const timerIntervalRef = useRef(null);
-
-    // This ref helps ensure session initiation only happens once per "valid" component mount cycle
     const hasInitiatedSessionRef = useRef(false);
 
     const {
@@ -55,71 +55,59 @@ const QuizTakingPage = () => {
     const quiz = quizData?.quiz;
     const questions = quizData?.questions || [];
 
-    // console.log("QuizTakingPage: Query Data Status", {
+    // console.log("QuizTakingPage: Query Data Status", { // Removed console.log
     //     quizIsLoading, quizIsError, quiz, questionsLength: questions.length,
     //     quizSession: !!quizSession, timeLeft
     // });
 
-    // Handles quiz submission, including auto-submission when time runs out
-    const handleSubmitQuiz = useCallback(async (isAutoSubmit = false) => {
-        console.log(`QuizTakingPage: handleSubmitQuiz called (isAutoSubmit: ${isAutoSubmit})`, { quizId, quizSession, timeLeft });
 
+    const handleSubmitQuiz = useCallback(async (isAutoSubmit = false) => {
+        // console.log(`QuizTakingPage: handleSubmitQuiz called (isAutoSubmit: ${isAutoSubmit})`, { quizId, quizSession, timeLeft }); // Removed console.log
         if (!quizId) {
-            toast.error("Cannot submit quiz: Quiz ID is missing.");
+            // toast.error("Cannot submit quiz: Quiz ID is missing."); // Removed toast
             return;
         }
         if (!quizSession || !quizSession._id) {
-            if (!isAutoSubmit) { // Only show error if manual submit fails due to missing session
-                toast.error("Quiz session not active. Cannot submit.");
-            }
+            // toast.error("Quiz session not active. Cannot submit."); // Removed toast
             return;
         }
-
-        // Prevent manual submission if time is 0. Auto-submit will handle it.
         if (timeLeft === 0 && !isAutoSubmit) {
-            toast.error("Time is up! Your quiz was automatically submitted.");
+            // toast.error("Time is up! Your quiz was automatically submitted."); // Removed toast
             return;
         }
 
         const answersToSubmit = {};
         questions.forEach(q => {
-            // Ensure every question has an entry, even if no answer was provided
-            if (studentAnswers[q._id]) {
-                answersToSubmit[q._id] = studentAnswers[q._id];
-            } else {
-                answersToSubmit[q._id] = {
-                    type: q.type,
-                    submittedAnswerText: '',
-                    selectedOptionIds: []
-                };
+            const currentAnswer = studentAnswers[q._id] || {
+                type: q.type,
+                submittedAnswerText: '',
+                selectedOptionIds: []
+            };
+            answersToSubmit[q._id] = { ...currentAnswer };
+            if ((q.type === 'multiple_choice' || q.type === 'true_false' || q.type === 'multi_select') && !Array.isArray(answersToSubmit[q._id].selectedOptionIds)) {
+                answersToSubmit[q._id].selectedOptionIds = [];
             }
         });
+        setStudentAnswers(answersToSubmit);
 
-        // Manual submission validation (skip for auto-submit to allow partial submission on timeout)
         if (!isAutoSubmit) {
             for (const q of questions) {
                 const answer = answersToSubmit[q._id];
-
                 if (!answer) {
-                    toast.error(`Please answer all questions. Question ${questions.indexOf(q) + 1} is unanswered.`);
+                    // toast.error(`Please answer all questions. Question ${questions.indexOf(q) + 1} is unanswered.`); // Removed toast
                     return;
                 }
-
-                if ((q.type === 'multiple_choice' || q.type === 'true_false' || q.type === 'multi_select')) {
-                    if (!answer.selectedOptionIds || answer.selectedOptionIds.length === 0) {
-                        toast.error(`Please select an option for Question ${questions.indexOf(q) + 1}.`);
-                        return;
-                    }
-                } else if (q.type === 'short_answer') {
-                    if (!answer.submittedAnswerText || answer.submittedAnswerText.trim() === '') {
-                        toast.error(`Please provide an answer for Question ${questions.indexOf(q) + 1}.`);
-                        return;
-                    }
+                if ((q.type === 'multiple_choice' || q.type === 'true_false' || q.type === 'multi_select') && (!answer.selectedOptionIds || answer.selectedOptionIds.length === 0)) {
+                    // toast.error(`Please select an option for Question ${questions.indexOf(q) + 1}.`); // Removed toast
+                    return;
+                } else if (q.type === 'short_answer' && (!answer.submittedAnswerText || answer.submittedAnswerText.trim() === '')) {
+                    // toast.error(`Please provide an answer for Question ${questions.indexOf(q) + 1}.`); // Removed toast
+                    return;
                 }
             }
         }
 
-        console.log("QuizTakingPage: Current studentAnswers state before submission:", JSON.stringify(answersToSubmit, null, 2));
+        // console.log("QuizTakingPage: Current studentAnswers state before submission:", JSON.stringify(answersToSubmit, null, 2)); // Removed console.log
 
         const submissionPayload = {
             quizId,
@@ -135,194 +123,149 @@ const QuizTakingPage = () => {
             })
         };
 
-        console.log("QuizTakingPage: Submitting answers payload to backend:", JSON.stringify(submissionPayload, null, 2));
+        // console.log("QuizTakingPage: Submitting answers payload to backend:", JSON.stringify(submissionPayload, null, 2)); // Removed console.log
         try {
             await submitQuiz(submissionPayload).unwrap();
-            // On successful submission, clear local storage session as it's no longer needed
-            localStorage.removeItem(`quizSession_${quizId}_${userId}`);
         } catch (err) {
-            console.error("QuizTakingPage: Error during submitQuiz mutation:", err);
-            toast.error(err?.data?.message || "Failed to submit quiz.");
+            // console.error("QuizTakingPage: Error during submitQuiz mutation:", err); // Removed console.error
+            // toast.error(err?.data?.message || "Failed to submit quiz."); // Removed toast
         }
-    }, [quizId, quizSession, studentAnswers, questions, submitQuiz, timeLeft, userId, submitLoading, submitSuccess]);
+    }, [quizId, quizSession, studentAnswers, questions, submitQuiz, timeLeft]);
 
-    // This ref holds the logic for initiating or resuming a quiz session.
-    // It's a ref so it doesn't cause re-renders when it changes, but the
-    // useEffect calling it still reacts to its dependencies.
     const sessionLogicRef = useRef(null);
 
     sessionLogicRef.current = async () => {
-        console.log("QuizTakingPage: sessionLogicRef.current called.");
+        // console.log("QuizTakingPage: sessionLogicRef.current called."); // Removed console.log
         const isFreshStartFromNav = location.state?.newSession;
         const storedSessionKey = `quizSession_${quizId}_${userId}`;
         let storedSession = null;
 
-        // Important: If quiz is not defined yet, wait.
-        if (!quiz) {
-            console.log("QuizTakingPage: Quiz details not yet loaded for session logic, returning.");
+        if (quiz?.duration === null || quiz?.duration === undefined || quiz?.duration <= 0) {
+            // console.log("QuizTakingPage: Quiz is untimed. Setting up untimed session."); // Removed console.log
+            setQuizSession({ _id: 'untimed', startTime: new Date().toISOString(), durationMinutes: Infinity, quizId, userId });
+            setTimeLeft(Infinity);
+            localStorage.removeItem(storedSessionKey);
+            // toast.info("This is an untimed quiz."); // Removed toast
             return;
         }
 
-        // --- FIX for 'Session timed out already' for timed quizzes ---
-        // Changed condition: only attempt to load from local storage if not a fresh start AND quiz has a duration
-        // For untimed quizzes, we explicitly don't need a stored session or complex timer logic.
-
-        if (!isFreshStartFromNav && quiz.duration && quiz.duration > 0) {
+        if (!isFreshStartFromNav) {
             try {
                 const stored = localStorage.getItem(storedSessionKey);
                 if (stored) {
                     storedSession = JSON.parse(stored);
-                    console.log("QuizTakingPage: Found stored session in localStorage:", storedSession);
+                    // console.log("QuizTakingPage: Found stored session in localStorage:", storedSession); // Removed console.log
 
-                    // Validate stored session
                     if (storedSession.quizId !== quizId || storedSession.userId !== userId || !storedSession.startTime || storedSession.durationMinutes === undefined) {
-                        console.warn("QuizTakingPage: Stored session found but mismatched or incomplete. Discarding.");
+                        // console.warn("QuizTakingPage: Stored session found but mismatched or incomplete. Discarding."); // Removed console.warn
                         localStorage.removeItem(storedSessionKey);
                         storedSession = null;
                     }
                 } else {
-                    console.log("QuizTakingPage: No stored session found in localStorage.");
+                    // console.log("QuizTakingPage: No stored session found in localStorage."); // Removed console.log
                 }
             } catch (e) {
-                console.error("QuizTakingPage: Failed to parse stored quiz session from localStorage, clearing data:", e);
+                // console.error("QuizTakingPage: Failed to parse stored quiz session from localStorage, clearing data:", e); // Removed console.error
                 localStorage.removeItem(storedSessionKey);
                 storedSession = null;
             }
-        } else if (isFreshStartFromNav) {
-            // Always clear local storage if a fresh start is explicitly requested
+        } else {
             localStorage.removeItem(storedSessionKey);
-            console.log(`QuizTakingPage: Fresh start detected (from navigation): Cleared local storage for quiz session: ${storedSessionKey}`);
-        } else if (!quiz.duration || quiz.duration <= 0) {
-            // If it's an untimed quiz, regardless of fresh start, clear any old timed session data
-            // and set up immediately. This prevents starting a backend session for untimed quizzes
-            // which might not even have a /start endpoint or session tracking.
-            console.log("QuizTakingPage: Quiz is untimed. Setting up untimed session directly.");
-            setQuizSession({ _id: 'untimed', startTime: new Date().toISOString(), durationMinutes: Infinity, quizId, userId });
-            setTimeLeft(Infinity); // Indicate no time limit
-            localStorage.removeItem(storedSessionKey); // Clear any old data for this quiz
-            hasInitiatedSessionRef.current = true; // Mark as initiated
-            return; // Exit as no further timer/backend logic is needed for untimed quizzes
+            // console.log(`QuizTakingPage: Fresh start detected (from navigation): Cleared local storage for quiz session: ${storedSessionKey}`); // Removed console.log
         }
 
-        // Logic for TIMED quizzes:
         if (storedSession) {
             const startTimestamp = new Date(storedSession.startTime).getTime();
             const durationMs = storedSession.durationMinutes * 60 * 1000;
             const elapsedMs = Date.now() - startTimestamp;
             const remainingMs = durationMs - elapsedMs;
-            console.log("QuizTakingPage: Processing stored session.", { storedSession, elapsedMs, remainingMs });
+            // console.log("QuizTakingPage: Processing stored session.", { storedSession, elapsedMs, remainingMs }); // Removed console.log
 
             if (remainingMs <= 0) {
-                console.log("QuizTakingPage: Local storage quiz session has already timed out. Triggering auto-submit.");
+                // console.log("QuizTakingPage: Local storage quiz session has already timed out. Auto-submitting (if not already)."); // Removed console.log
                 setTimeLeft(0);
-                // Only trigger submit if not already submitting/submitted
                 if (!submitLoading && !submitSuccess) {
+                    // console.log("QuizTakingPage: Triggering auto-submit due to timed out stored session."); // Removed console.log
                     await handleSubmitQuiz(true);
                 }
-                localStorage.removeItem(storedSessionKey); // Clear expired session from storage
-                toast.error("Your previous quiz session timed out. Please start a new one.");
-                // Potentially navigate back or to quiz list if quiz already expired
-                // navigate('/my-learning/quizzes');
+                localStorage.removeItem(storedSessionKey);
+                // toast.error("Your previous quiz session timed out. Please start a new one."); // Removed toast
             } else {
-                console.log("QuizTakingPage: Resuming quiz session from localStorage.");
+                // console.log("QuizTakingPage: Resuming quiz session from localStorage."); // Removed console.log
                 setQuizSession(storedSession);
                 setTimeLeft(Math.ceil(remainingMs / 1000));
-                toast.info("Quiz session resumed from previous attempt.");
             }
         } else {
-            console.log("QuizTakingPage: No valid stored session found or fresh start initiated. Attempting to start a new quiz session via backend.");
+            // console.log("QuizTakingPage: No valid stored session found or fresh start initiated. Attempting to start a new quiz session via backend."); // Removed console.log
             try {
-                // Ensure userId is available before calling startQuiz
-                if (!userId) {
-                    console.error("QuizTakingPage: userId is not available to start quiz session.");
-                    toast.error("User not logged in. Cannot start quiz.");
-                    navigate('/login');
-                    return;
-                }
                 const result = await startQuiz(quizId).unwrap();
                 const newSession = result.quizSession;
-                console.log("QuizTakingPage: Backend responded with new session:", newSession);
+                // console.log("QuizTakingPage: Backend responded with new session:", newSession); // Removed console.log
 
-                // Store the new session
                 localStorage.setItem(storedSessionKey, JSON.stringify(newSession));
                 setQuizSession(newSession);
 
-                // Calculate and set timeLeft for the new session
                 if (newSession.durationMinutes && newSession.durationMinutes > 0) {
                     const durationMs = newSession.durationMinutes * 60 * 1000;
                     const startTimestamp = new Date(newSession.startTime).getTime();
                     const elapsedMs = Date.now() - startTimestamp;
-                    let remainingMs = durationMs - elapsedMs;
-
-                    if (remainingMs < 0) remainingMs = 0; // Ensure remaining time is not negative
-
-                    console.log("QuizTakingPage: Calculating timeLeft for new session from backend.", { durationMs, startTimestamp, elapsedMs, remainingMs });
-                    setTimeLeft(Math.ceil(remainingMs / 1000));
+                    const remainingMs = durationMs - elapsedMs;
+                    // console.log("QuizTakingPage: Calculating timeLeft for new session from backend.", { durationMs, startTimestamp, elapsedMs, remainingMs }); // Removed console.log
 
                     if (remainingMs <= 0) {
-                        toast.error("New quiz session already timed out. Auto-submitting.");
+                        setTimeLeft(0);
+                        // toast.error("New quiz session already timed out. Auto-submitting."); // Removed toast
                         if (!submitLoading && !submitSuccess) {
-                            console.log("QuizTakingPage: Triggering auto-submit due to new session already timed out.");
+                            // console.log("QuizTakingPage: Triggering auto-submit due to new session already timed out."); // Removed console.log
                             await handleSubmitQuiz(true);
                         }
+                    } else {
+                        setTimeLeft(Math.ceil(remainingMs / 1000));
                     }
                 } else {
-                    setTimeLeft(Infinity); // Should be handled by the untimed check earlier, but as safeguard
+                    setTimeLeft(Infinity);
+                    // console.log("QuizTakingPage: Backend started an untimed session (or duration 0)."); // Removed console.log
                 }
-                toast.success("New quiz session started!");
+                // toast.success("New quiz session started!"); // Removed toast
             } catch (err) {
-                console.error("QuizTakingPage: Failed to start new quiz session from backend:", err);
-                toast.error(err?.data?.message || "Failed to start quiz. Please try again.");
-                // Potentially navigate away if quiz cannot be started
-                navigate(-1);
+                // console.error("QuizTakingPage: Failed to start new quiz session from backend:", err); // Removed console.error
+                // toast.error(err?.data?.message || "Failed to start quiz. Please try again."); // Removed toast
             }
         }
     };
 
-    // Main useEffect for managing session initiation
     useEffect(() => {
-        console.log("QuizTakingPage: Main useEffect dependencies changed.", {
-            quizId, userId, userLoading, quizIsLoading, quizData: !!quizData, quizDataQuiz: !!quizData?.quiz, hasInitiatedSessionRef: hasInitiatedSessionRef.current
-        });
+        // console.log("QuizTakingPage: Main useEffect dependencies changed.", { // Removed console.log
+        //     quizId, userId, userLoading, quizIsLoading,
+        //     quizAvailable: !!quiz, questionsAvailable: questions.length > 0,
+        //     hasInitiatedSessionRef: hasInitiatedSessionRef.current
+        // });
 
-        // Wait until all necessary data is loaded and a session hasn't been initiated yet
-        // and userId is available (crucial for local storage key and backend calls)
-        if (!quizId || !userId || userLoading || quizIsLoading || !quizData || !quizData.quiz) {
-            console.log("QuizTakingPage: Main Effect waiting for data or already initiated. Skipping sessionLogicRef call.");
+        if (!quizId || !userId || quizIsLoading || userLoading || !quiz || questions.length === 0 || hasInitiatedSessionRef.current) {
+            // if (!hasInitiatedSessionRef.current) { // Removed console.log
+            //     console.log("QuizTakingPage: Main Effect waiting for data or already initiated.");
+            // }
             return;
         }
 
-        // Only run session logic once per "valid" component mount and data availability
-        // `quizSession` check prevents re-initiating if a session is already active (e.g., untimed quiz sets it immediately)
-        if (!hasInitiatedSessionRef.current && !quizSession) {
-            hasInitiatedSessionRef.current = true; // Mark as initiated
-            console.log("QuizTakingPage: All initial data available. Calling sessionLogicRef.current()");
-            sessionLogicRef.current(); // Execute the session logic defined in the ref
-        }
+        hasInitiatedSessionRef.current = true;
+        // console.log("QuizTakingPage: All initial data available. Calling sessionLogicRef.current()"); // Removed console.log
+        sessionLogicRef.current();
 
-        // Cleanup function for this useEffect
         return () => {
-            console.log("QuizTakingPage: Main useEffect cleanup.");
-            // Clear timer interval on component unmount to prevent memory leaks
+            // console.log("QuizTakingPage: Main useEffect cleanup."); // Removed console.log
             if (timerIntervalRef.current) {
                 clearInterval(timerIntervalRef.current);
                 timerIntervalRef.current = null;
             }
-            // Do NOT reset hasInitiatedSessionRef.current here. If the component unmounts
-            // and remounts, you might want to re-evaluate the session. However, the current
-            // logic handles this by re-running sessionLogicRef if needed.
-            // Resetting it here might cause unintended re-starts if dependencies didn't truly change.
-            // For now, let's keep it as is, assuming navigation fully unmounts and remounts for a truly "new session".
         };
-    }, [quizId, userId, userLoading, quizIsLoading, quizData, quizData?.quiz, location.state?.newSession, quizSession]); // Added quizSession as dependency to prevent re-init if set by untimed
+    }, [quizId, userId, userLoading, quizIsLoading, quiz, questions.length, location.state?.newSession]);
 
-    // Effect for the countdown timer itself (isolated from session initiation)
     useEffect(() => {
-        console.log("QuizTakingPage: Timer useEffect dependencies changed.", { timeLeft, quizSession: !!quizSession, timerIntervalRefCurrent: timerIntervalRef.current });
+        // console.log("QuizTakingPage: Timer useEffect dependencies changed.", { timeLeft, quizSession: !!quizSession, timerIntervalRefCurrent: timerIntervalRef.current }); // Removed console.log
 
-        // If no time limit, or time is uninitialized/negative, ensure no timer runs.
         if (timeLeft === null || timeLeft === Infinity || !quizSession) {
-            console.log("QuizTakingPage: Timer useEffect: Skipping timer setup (timeLeft null/Infinity or no session).");
+            // console.log("QuizTakingPage: Timer useEffect: Skipping timer setup (timeLeft null/Infinity or no session)."); // Removed console.log
             if (timerIntervalRef.current) {
                 clearInterval(timerIntervalRef.current);
                 timerIntervalRef.current = null;
@@ -330,53 +273,41 @@ const QuizTakingPage = () => {
             return;
         }
 
-        // Clear any existing interval to prevent multiple timers running
+        if (timeLeft <= 0) {
+            // console.log("QuizTakingPage: Timer useEffect: timeLeft is 0 or less. Ensuring interval is cleared and triggering auto-submit if needed."); // Removed console.log
+            if (timerIntervalRef.current) {
+                clearInterval(timerIntervalRef.current);
+                timerIntervalRef.current = null;
+            }
+            if (!submitLoading && !submitSuccess) {
+                // toast.error("Time's up! Submitting your quiz..."); // Removed toast
+                handleSubmitQuiz(true);
+            }
+            return;
+        }
+
         if (timerIntervalRef.current) {
-            console.log("QuizTakingPage: Timer useEffect: Clearing existing interval.");
+            // console.log("QuizTakingPage: Timer useEffect: Clearing existing interval."); // Removed console.log
             clearInterval(timerIntervalRef.current);
         }
 
-        if (timeLeft > 0) {
-            console.log(`QuizTakingPage: Timer useEffect: Starting timer with ${timeLeft} seconds.`);
-            const interval = setInterval(() => {
-                setTimeLeft(prev => {
-                    if (prev === null || prev === Infinity) { // Defensive check
-                        clearInterval(timerIntervalRef.current);
-                        timerIntervalRef.current = null;
-                        return prev;
-                    }
-                    if (prev <= 1) {
-                        // Time is up or less than 1 second remaining
-                        console.log("QuizTakingPage: Timer countdown reached 0 or less. Clearing interval and auto-submitting.");
-                        clearInterval(timerIntervalRef.current);
-                        timerIntervalRef.current = null; // Ensure ref is cleared
-                        toast.error("Time's up! Submitting your quiz...");
-                        handleSubmitQuiz(true); // Trigger auto-submission
-                        return 0; // Set timeLeft to 0
-                    }
-                    console.log(`QuizTakingPage: Timer: ${prev - 1} seconds left.`);
-                    return prev - 1; // Decrement time
-                });
-            }, 1000); // Update every second
-            timerIntervalRef.current = interval; // Store the interval ID
-        } else if (timeLeft === 0) {
-            // Time is exactly 0, ensure no timer is running and trigger submit if needed
-            console.log("QuizTakingPage: Timer useEffect: timeLeft is 0. Ensuring interval is cleared.");
-            if (timerIntervalRef.current) {
-                clearInterval(timerIntervalRef.current);
-                timerIntervalRef.current = null;
-            }
-            // If the quiz hasn't been submitted yet, trigger it.
-            // This case handles situations where timeLeft might become 0 from initial load.
-            if (!submitLoading && !submitSuccess && quizSession && quizSession._id !== 'untimed') {
-                 console.log("QuizTakingPage: Triggering auto-submit due to timeLeft being 0 on render.");
-                 handleSubmitQuiz(true);
-            }
-        }
+        // console.log(`QuizTakingPage: Timer useEffect: Starting timer with ${timeLeft} seconds.`); // Removed console.log
+        const interval = setInterval(() => {
+            setTimeLeft(prev => {
+                if (prev <= 1) {
+                    // console.log("QuizTakingPage: Timer countdown reached 0 or less. Clearing interval."); // Removed console.log
+                    clearInterval(timerIntervalRef.current);
+                    timerIntervalRef.current = null;
+                    return 0;
+                }
+                // console.log(`QuizTakingPage: Timer: ${prev - 1} seconds left.`); // Removed console.log
+                return prev - 1;
+            });
+        }, 1000);
+        timerIntervalRef.current = interval;
 
-        // Cleanup function for the timer effect
         return () => {
-            console.log("QuizTakingPage: Timer useEffect cleanup.");
+            // console.log("QuizTakingPage: Timer useEffect cleanup."); // Removed console.log
             if (timerIntervalRef.current) {
                 clearInterval(timerIntervalRef.current);
                 timerIntervalRef.current = null;
@@ -384,63 +315,54 @@ const QuizTakingPage = () => {
         };
     }, [timeLeft, handleSubmitQuiz, quizSession, submitLoading, submitSuccess]);
 
-    // Effect for initial error handling and navigation
+
     useEffect(() => {
-        console.log("QuizTakingPage: URL parameter and initial error handling useEffect.");
+        // console.log("QuizTakingPage: URL parameter and initial error handling useEffect."); // Removed console.log
         if (!quizId) {
-            toast.error("No Quiz ID provided in the URL.");
+            // toast.error("No Quiz ID provided in the URL."); // Removed toast
             navigate(-1);
             return;
         }
 
         if (quizIsError) {
-            console.error("QuizTakingPage: Error fetching quiz for student:", quizError);
-            toast.error(quizError?.data?.message || "Failed to load quiz. Please try again later.");
-            setTimeout(() => navigate(-1), 2000);
-        } else if (userError) {
-            console.error("QuizTakingPage: Error loading user data:", userError);
-            toast.error(userError?.data?.message || "Failed to load user data. Please log in.");
-            setTimeout(() => navigate('/login'), 2000); // Redirect to login if user data fails
-        } else if (startQuizError) {
-            console.error("QuizTakingPage: Error starting quiz session:", startQuizErrorData);
-            toast.error(startQuizErrorData?.data?.message || "Failed to start quiz session. It might have already ended or is not available.");
-            setTimeout(() => navigate(-1), 2000); // Go back if session can't start
+            // console.error("QuizTakingPage: Error fetching quiz for student:", quizError); // Removed console.error
+            // toast.error(quizError?.data?.message || "Failed to load quiz. Please try again later."); // Removed toast
+            navigate(-1);
         }
-    }, [quizId, quizIsError, quizError, userError, startQuizError, startQuizErrorData, navigate]);
+    }, [quizId, quizIsError, quizError, navigate]);
 
-    // Effect for handling quiz submission success/error and navigation post-submission
+
     useEffect(() => {
-        console.log("QuizTakingPage: Submit success/error useEffect.", { submitSuccess, submitMutationError });
+        // console.log("QuizTakingPage: Submit success/error useEffect.", { submitSuccess, submitMutationError }); // Removed console.log
         if (submitSuccess && submitResultData) {
-            toast.success(submitResultData.message || "Quiz submitted successfully!");
+            // toast.success(submitResultData.message || "Quiz submitted successfully!"); // Removed toast
 
-            // Local storage session cleared within handleSubmitQuiz now for better atomicity with submission
-            // localStorage.removeItem(`quizSession_${quizId}_${userId}`);
-            // console.log(`QuizTakingPage: Cleared quiz session from localStorage: quizSession_${quizId}_${userId}`);
+            localStorage.removeItem(`quizSession_${quizId}_${userId}`);
+            // console.log(`QuizTakingPage: Cleared quiz session from localStorage: quizSession_${quizId}_${userId}`); // Removed console.log
 
             if (timerIntervalRef.current) {
                 clearInterval(timerIntervalRef.current);
                 timerIntervalRef.current = null;
-                console.log("QuizTakingPage: Cleared timer interval after submission.");
+                // console.log("QuizTakingPage: Cleared timer interval after submission."); // Removed console.log
             }
 
             if (submitResultData.attemptId) {
-                console.log("QuizTakingPage: Navigating to quiz results page with attemptId:", submitResultData.attemptId);
+                // console.log("QuizTakingPage: Navigating to quiz results page with attemptId:", submitResultData.attemptId); // Removed console.log
                 navigate(`/quiz/results/${submitResultData.attemptId}`);
             } else {
-                toast.info("Quiz submitted. Results might be available on your quiz attempts page.");
+                // toast.info("Quiz submitted. Results might be available on your quiz attempts page."); // Removed toast
                 navigate('/my-learning/quizzes');
             }
         }
         if (submitMutationError && submitErrorData) {
-            console.error("QuizTakingPage: Error submitting quiz:", submitErrorData);
-            toast.error(submitErrorData.data?.message || "Failed to submit quiz.");
+            // console.error("QuizTakingPage: Error submitting quiz:", submitErrorData); // Removed console.error
+            // toast.error(submitErrorData.data?.message || "Failed to submit quiz."); // Removed toast
         }
     }, [submitSuccess, submitResultData, submitMutationError, submitErrorData, navigate, quizId, userId]);
 
 
-    const handleAnswerChange = (questionId, type, newTextValue, selectedOptionId = null) => {
-        console.log(`QuizTakingPage: handleAnswerChange for QID: ${questionId}, Type: ${type}, NewText: ${newTextValue}, SelectedOptionId: ${selectedOptionId}`);
+    const handleAnswerChange = (questionId, type, value, optionId = null) => {
+        // console.log(`QuizTakingPage: handleAnswerChange for QID: ${questionId}, Type: ${type}, Value: ${value}, OptionId: ${optionId}`); // Removed console.log
         setStudentAnswers(prevAnswers => {
             const currentAnswer = prevAnswers[questionId] || { type, submittedAnswerText: '', selectedOptionIds: [] };
             let updatedAnswer = {};
@@ -450,36 +372,33 @@ const QuizTakingPage = () => {
                 case 'true_false':
                     updatedAnswer = {
                         ...currentAnswer,
-                        selectedOptionIds: [selectedOptionId].filter(Boolean), // Ensure it's always an array with one ID or empty
-                        submittedAnswerText: newTextValue || '' // Store the text value of the selected option
+                        selectedOptionIds: [optionId].filter(Boolean),
+                        submittedAnswerText: value
                     };
                     break;
                 case 'multi_select':
-                    const currentSelected = currentAnswer.selectedOptionIds || [];
-                    const newSelectedOptions = selectedOptionId
-                        ? (currentSelected.includes(selectedOptionId)
-                            ? currentSelected.filter(id => id !== selectedOptionId)
-                            : [...currentSelected, selectedOptionId])
-                        : currentSelected; // Handle case where selectedOptionId might be null/undefined initially
+                    const currentSelected = new Set(currentAnswer.selectedOptionIds || []);
+                    if (value) {
+                        currentSelected.add(optionId);
+                    } else {
+                        currentSelected.delete(optionId);
+                    }
                     updatedAnswer = {
                         ...currentAnswer,
-                        selectedOptionIds: newSelectedOptions.filter(Boolean), // Filter out any null/undefined
+                        selectedOptionIds: Array.from(currentSelected).filter(Boolean),
+                        submittedAnswerText: ''
                     };
-                    updatedAnswer.submittedAnswerText = ''; // Multi-select doesn't typically have a single text answer
                     break;
                 case 'short_answer':
                     updatedAnswer = {
                         ...currentAnswer,
-                        submittedAnswerText: newTextValue || '' // Ensure it's a string, not null/undefined
+                        submittedAnswerText: value
                     };
-                    updatedAnswer.selectedOptionIds = []; // Clear selectedOptionIds for short answer type
                     break;
                 default:
-                    // Fallback for unknown types, just store as text
-                    updatedAnswer = { ...currentAnswer, submittedAnswerText: newTextValue || '' };
-                    updatedAnswer.selectedOptionIds = [];
+                    updatedAnswer = { ...currentAnswer, submittedAnswerText: value };
             }
-            console.log(`QuizTakingPage: Updating question ${questionId}:`, updatedAnswer);
+            // console.log(`QuizTakingPage: Updating question ${questionId}:`, updatedAnswer); // Removed console.log
             return {
                 ...prevAnswers,
                 [questionId]: updatedAnswer
@@ -487,7 +406,6 @@ const QuizTakingPage = () => {
         });
     };
 
-    // Format time for display (MM:SS)
     const formatTime = (seconds) => {
         if (seconds === Infinity) return "No Time Limit";
         if (seconds < 0 || isNaN(seconds)) return "00:00";
@@ -496,17 +414,11 @@ const QuizTakingPage = () => {
         return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
     };
 
-    // Consolidated loading states
-    console.log("QuizTakingPage: Checking loading conditions before render.", {
-        quizIsLoading, userLoading, quizDuration: quiz?.duration, timeLeft, quizSession: !!quizSession, startQuizLoading, submitLoading
-    });
+    // console.log("QuizTakingPage: Checking loading conditions before render.", { // Removed console.log
+    //     quizIsLoading, userLoading, quizDuration: quiz?.duration, timeLeft, quizSession: !!quizSession
+    // });
 
-    // Determine if the loading spinner should be shown
-    const showLoadingSpinner = quizIsLoading || userLoading || startQuizLoading || submitLoading ||
-                               (quiz && quiz.duration > 0 && (timeLeft === null || !quizSession));
-                               // For timed quizzes, show loading until timeLeft and quizSession are set.
-
-    if (showLoadingSpinner) {
+    if (quizIsLoading || userLoading || startQuizLoading || (quiz?.duration > 0 && (timeLeft === null || !quizSession))) {
         return (
             <div className="flex justify-center items-center h-screen bg-gray-50 dark:bg-gray-900">
                 <Loader2 className="h-10 w-10 animate-spin text-blue-500" />
@@ -520,7 +432,8 @@ const QuizTakingPage = () => {
         if (quizIsError) errorMessage = quizError?.data?.message || "Failed to load quiz.";
         else if (userError) errorMessage = "Failed to load user data. Please log in.";
         else if (startQuizError) errorMessage = startQuizErrorData?.data?.message || "Failed to start quiz session.";
-        else if (!quiz || questions.length === 0) errorMessage = "Quiz not found or no questions available.";
+        else if (!quiz) errorMessage = "Quiz details not found.";
+        else if (questions.length === 0) errorMessage = "Quiz found but contains no questions.";
 
         return (
             <div className="flex flex-col justify-center items-center h-screen bg-gray-50 dark:bg-gray-900">
@@ -528,19 +441,6 @@ const QuizTakingPage = () => {
                     {errorMessage}
                 </p>
                 <Button onClick={() => navigate(-1)} className="mt-4 bg-blue-600 hover:bg-blue-700 text-white">Go Back</Button>
-            </div>
-        );
-    }
-
-    // Ensure quizSession is available before rendering the quiz content
-    // This handles cases where untimed quizzes set quizSession immediately,
-    // or timed quizzes set it after the backend call.
-    if (!quizSession) {
-        console.warn("QuizTakingPage: Quiz session not yet established, rendering loading/error state. This should ideally be caught by initial loading check.");
-        return (
-            <div className="flex justify-center items-center h-screen bg-gray-50 dark:bg-gray-900">
-                <Loader2 className="h-10 w-10 animate-spin text-blue-500" />
-                <p className="ml-3 text-xl text-gray-700 dark:text-gray-300">Preparing Quiz Session...</p>
             </div>
         );
     }
@@ -555,7 +455,6 @@ const QuizTakingPage = () => {
                             {quiz.description || 'Attempt this quiz to test your knowledge!'}
                         </CardDescription>
                     </div>
-                    {/* Display timer only if quiz has a positive duration */}
                     {quiz.duration && quiz.duration > 0 ? (
                         <div className="text-right flex flex-col items-end">
                             <p className="text-teal-100 text-md font-semibold">Time Left:</p>
@@ -575,14 +474,15 @@ const QuizTakingPage = () => {
                                 <span className="float-right text-base text-gray-600 dark:text-gray-300">{question.points} Points</span>
                             </CardTitle>
                             <div className="mt-4">
-                                {question.type === 'multiple_choice' || question.type === 'true_false' ? (
+                                {(question.type === 'multiple_choice' || question.type === 'true_false') ? (
                                     <RadioGroup
                                         onValueChange={(selectedOptionId) => {
                                             const selectedOption = question.options.find(opt => opt._id === selectedOptionId);
                                             handleAnswerChange(question._id, question.type, selectedOption?.text || '', selectedOptionId);
                                         }}
-                                        value={studentAnswers[question._id]?.selectedOptionIds?.[0] || ''}
+                                        value={studentAnswers[question._id]?.selectedOptionIds[0] || ''}
                                         className="space-y-3"
+                                        disabled={timeLeft === 0}
                                     >
                                         {question.options.map((option) => (
                                             <div key={option._id} className="flex items-center space-x-3 p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors duration-150">
@@ -590,7 +490,7 @@ const QuizTakingPage = () => {
                                                     value={option._id}
                                                     id={`option-${question._id}-${option._id}`}
                                                     className="w-5 h-5 text-blue-500 dark:text-blue-400"
-                                                    disabled={timeLeft === 0 || submitLoading}
+                                                    disabled={timeLeft === 0}
                                                 />
                                                 <Label htmlFor={`option-${question._id}-${option._id}`} className="text-lg font-normal text-gray-800 dark:text-gray-200 flex-grow cursor-pointer">
                                                     {option.text}
@@ -602,16 +502,16 @@ const QuizTakingPage = () => {
                                     <div className="space-y-3">
                                         {question.options.map((option) => (
                                             <div key={option._id} className="flex items-center space-x-3 p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors duration-150">
-                                                <input
-                                                    type="checkbox"
-                                                    id={`option-${question._id}-${option._id}`}
-                                                    value={option._id}
+                                                <Checkbox
+                                                    id={`checkbox-${question._id}-${option._id}`}
                                                     checked={studentAnswers[question._id]?.selectedOptionIds?.includes(option._id) || false}
-                                                    onChange={() => handleAnswerChange(question._id, question.type, null, option._id)}
-                                                    className="w-5 h-5 text-blue-500 dark:text-blue-400 rounded focus:ring-blue-500 dark:focus:ring-blue-400"
-                                                    disabled={timeLeft === 0 || submitLoading}
+                                                    onCheckedChange={(checked) => {
+                                                        handleAnswerChange(question._id, question.type, checked, option._id);
+                                                    }}
+                                                    className="w-5 h-5"
+                                                    disabled={timeLeft === 0}
                                                 />
-                                                <Label htmlFor={`option-${question._id}-${option._id}`} className="text-lg font-normal text-gray-800 dark:text-gray-200 flex-grow cursor-pointer">
+                                                <Label htmlFor={`checkbox-${question._id}-${option._id}`} className="text-lg font-normal text-gray-800 dark:text-gray-200 flex-grow cursor-pointer">
                                                     {option.text}
                                                 </Label>
                                             </div>
@@ -623,7 +523,7 @@ const QuizTakingPage = () => {
                                         value={studentAnswers[question._id]?.submittedAnswerText || ''}
                                         onChange={(e) => handleAnswerChange(question._id, question.type, e.target.value)}
                                         className="min-h-[80px] border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                                        disabled={timeLeft === 0 || submitLoading}
+                                        disabled={timeLeft === 0}
                                     />
                                 ) : (
                                     <p className="text-red-500">Unsupported question type: {question.type}</p>
@@ -635,7 +535,7 @@ const QuizTakingPage = () => {
                 <CardFooter className="flex justify-end p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 rounded-b-lg">
                     <Button
                         onClick={() => handleSubmitQuiz(false)}
-                        disabled={submitLoading || timeLeft === 0 || !quizSession || quizSession._id === 'untimed' && (submitLoading)}
+                        disabled={submitLoading || timeLeft === 0}
                         className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-all duration-200 ease-in-out flex items-center gap-2"
                     >
                         {submitLoading ? (
